@@ -8362,29 +8362,27 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
   items.extend(gen_for_member_like_expr_item(&node.nodes[0], context, 0, total_items_len));
 
   for (i, item) in node.nodes.iter().enumerate().skip(1) {
-    let force_use_new_line = !context.config.member_expression_prefer_single_line
-      && node_helpers::get_use_new_lines_for_nodes(&node.nodes[i - 1], &node.nodes[i], context.program);
-    let line_per_expression = context.config.member_expression_line_per_expression
-      || match node.nodes.last().unwrap() {
-        MemberLikeExprItem::CallExpr(call_expr) => {
-          let callee_count = node.nodes.len() - 1;
-          callee_count > 1 && call_expr.original_call_expr.args().len() > 0
-        }
-        _ => false,
-      };
-
+    let force_use_new_line =
+      !context.config.member_expression_prefer_single_line && node_helpers::get_use_new_lines_for_nodes(&node.nodes[i - 1], &node.nodes[i], context.program);
     if item.is_optional() || !item.is_computed() {
       if force_use_new_line {
         items.push_signal(Signal::NewLine);
-      } else if !line_per_expression {
+      } else if !context.config.member_expression_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
       } else {
-        items.push_condition(if_true_or(
-          "isMultipleLines",
-          Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
-          Signal::NewLine.into(),
-          Signal::PossibleNewLine.into(),
-        ));
+        let parent_kind = context.parent().kind();
+        let is_in_jsx = parent_kind == NodeKind::JSXOpeningElement || parent_kind == NodeKind::JSXExprContainer;
+        let is_in_call_expr = node.nodes.iter().any(|n| matches!(n, MemberLikeExprItem::CallExpr(_)));
+        if is_in_jsx || is_in_call_expr {
+          items.push_signal(Signal::PossibleNewLine);
+        } else {
+          items.push_condition(if_true_or(
+            "isMultipleLines",
+            Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
+            Signal::NewLine.into(),
+            Signal::PossibleNewLine.into(),
+          ));
+        }
       }
     }
 
