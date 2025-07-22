@@ -8364,7 +8364,14 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
   for (i, item) in node.nodes.iter().enumerate().skip(1) {
     let force_use_new_line = !context.config.member_expression_prefer_single_line
       && node_helpers::get_use_new_lines_for_nodes(&node.nodes[i - 1], &node.nodes[i], context.program);
-    let line_per_expression = context.config.member_expression_line_per_expression;
+    let line_per_expression = context.config.member_expression_line_per_expression
+      || match node.nodes.last().unwrap() {
+        MemberLikeExprItem::CallExpr(call_expr) => {
+          let callee_count = node.nodes.len() - 1;
+          callee_count > 1 && call_expr.original_call_expr.args().len() > 0
+        }
+        _ => false,
+      };
 
     if item.is_optional() || !item.is_computed() {
       if force_use_new_line {
