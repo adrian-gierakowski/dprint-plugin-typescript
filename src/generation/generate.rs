@@ -8370,12 +8370,19 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
       } else if !context.config.member_expression_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
       } else {
-        items.push_condition(if_true_or(
-          "isMultipleLines",
-          Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
-          Signal::NewLine.into(),
-          Signal::PossibleNewLine.into(),
-        ));
+        let parent_kind = context.parent().kind();
+        let is_in_jsx = parent_kind == NodeKind::JSXOpeningElement || parent_kind == NodeKind::JSXExprContainer;
+        let is_in_call_expr = node.nodes.iter().any(|n| matches!(n, MemberLikeExprItem::CallExpr(_)));
+        if is_in_jsx || is_in_call_expr {
+          items.push_signal(Signal::PossibleNewLine);
+        } else {
+          items.push_condition(if_true_or(
+            "isMultipleLines",
+            Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
+            Signal::NewLine.into(),
+            Signal::PossibleNewLine.into(),
+          ));
+        }
       }
     }
 
