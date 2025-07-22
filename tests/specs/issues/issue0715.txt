@@ -1,0 +1,22 @@
+~~ lineWidth: 80, indentWidth: 2, memberExpression.linePerExpression: true ~~
+== jsx ==
+const func = () => {
+  return coooooooooooooooooooooooooodition && (
+    <div style={{ marginTop: '20px' }}>
+      <Text size={TextSize.L}>
+        Lorem ipsum
+      </Text>
+    </div>
+  );
+};
+
+[expect]
+const func = () => {
+  return coooooooooooooooooooooooooodition && (
+    <div style={{ marginTop: "20px" }}>
+      <Text size={TextSize.L}>
+        Lorem ipsum
+      </Text>
+    </div>
+  );
+};
