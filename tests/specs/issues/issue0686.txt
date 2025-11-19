@@ -11,8 +11,10 @@ const createTestData = () =>
 [expect]
 const createTestData = () =>
   function*() {
-    const startingFrom = yield* Effect.map(DateTime.now, now =>
-      DateTime.startOf(now, "day"));
+    const startingFrom = yield* Effect.map(
+      DateTime.now,
+      now => DateTime.startOf(now, "day")
+    );
 
     return HashSet.make(DateTime.toEpochMillis(startingFrom));
   };
