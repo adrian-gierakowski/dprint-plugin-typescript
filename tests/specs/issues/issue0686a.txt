@@ -1,0 +1,21 @@
+~~ lineWidth: 80, indentWidth: 2, memberExpression.linePerExpression: true ~~
+== function args ==
+const startingFrom = Effect.map(DateTime.now, now => DateTime.startOf(now, "day"));
+const createTestData = () =>
+  function() {
+    const startingFrom = Effect.map(DateTime.now, now => DateTime.startOf(now, "day"));
+  };
+
+
+[expect]
+const startingFrom = Effect.map(
+  DateTime.now,
+  now => DateTime.startOf(now, "day"),
+);
+const createTestData = () =>
+  function() {
+    const startingFrom = Effect.map(
+      DateTime.now,
+      now => DateTime.startOf(now, "day"),
+    );
+  };
