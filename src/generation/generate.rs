@@ -8360,6 +8360,8 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
   }
 
   items.extend(gen_for_member_like_expr_item(&node.nodes[0], context, 0, total_items_len));
+  let mut previous_end_ln = LineNumber::new("previousEnd");
+  items.push_info(previous_end_ln);
 
   for (i, item) in node.nodes.iter().enumerate().skip(1) {
     let force_use_new_line =
@@ -8370,9 +8372,16 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
       } else if !context.config.member_expression_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
       } else {
+        let is_last_item = i == total_items_len - 1;
         items.push_condition(if_true_or(
           "isMultipleLines",
-          Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
+          Rc::new(move |context| {
+            if is_last_item {
+              condition_helpers::is_multiple_lines(context, member_expr_start_ln, previous_end_ln)
+            } else {
+              condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)
+            }
+          }),
           Signal::NewLine.into(),
           Signal::PossibleNewLine.into(),
         ));
@@ -8391,6 +8400,10 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
     } else {
       items.push_condition(conditions::indent_if_start_of_line(generated_item));
     }
+
+    let new_end_ln = LineNumber::new("previousEnd");
+    items.push_info(new_end_ln);
+    previous_end_ln = new_end_ln;
   }
 
   items
