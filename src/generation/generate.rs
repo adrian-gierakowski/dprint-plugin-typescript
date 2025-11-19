@@ -8354,6 +8354,8 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
   let member_expr_start_ln = LineNumber::new("memberExprStart");
   let member_expr_last_item_start_ln = LineNumber::new("memberExprStartLastItem");
   let total_items_len = node.nodes.len();
+  let total_length = node.nodes.iter().map(|n| n.range().end - n.range().start).sum::<usize>() + node.nodes.len() - 1;
+  let line_width = context.config.line_width as usize;
 
   if total_items_len > 1 {
     items.push_info(member_expr_start_ln);
@@ -8376,21 +8378,29 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
         items.push_condition(if_true_or(
           "isMultipleLines",
           Rc::new(move |context| {
-            if is_last_item {
-              condition_helpers::is_multiple_lines(context, member_expr_start_ln, previous_end_ln)
+            let is_multi = if is_last_item {
+                condition_helpers::is_multiple_lines(context, member_expr_start_ln, previous_end_ln)
             } else {
-              condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)
+                condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)
+            };
+
+            if let Some(true) = is_multi {
+                return Some(true);
             }
+            let column = context.writer_info.column_number;
+            if column as usize + total_length > line_width {
+                return Some(true);
+            }
+            Some(false)
           }),
           Signal::NewLine.into(),
-          Signal::PossibleNewLine.into(),
+          PrintItems::new(),
         ));
       }
     }
 
     let is_last_item = i == total_items_len - 1;
     if is_last_item {
-      // store this right before the last right expression
       items.push_info(member_expr_last_item_start_ln);
     }
 
