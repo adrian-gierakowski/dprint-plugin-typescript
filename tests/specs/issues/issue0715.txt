@@ -1,0 +1,108 @@
+~~ lineWidth: 80, indentWidth: 2, memberExpression.linePerExpression: true ~~
+== jsx ==
+// Valid formatting examples
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize.L}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+// Nearly identical code which gets formatted incorrectly
+// and is unstable (multiple passes keep reformatting the
+// code)
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize.L}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+[expect]
+// Valid formatting examples
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize.L}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+// Nearly identical code which gets formatted incorrectly
+// and is unstable (multiple passes keep reformatting the
+// code)
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize.L}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
