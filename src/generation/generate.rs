@@ -8370,12 +8370,22 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
       } else if !context.config.member_expression_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
       } else {
-        items.push_condition(if_true_or(
-          "isMultipleLines",
-          Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
-          Signal::NewLine.into(),
-          Signal::PossibleNewLine.into(),
-        ));
+        // We only want to check for is_multiple_lines when there are more than 2 items because
+        // for 2 items, it will always be consistent (one separator).
+        // Also, checking for is_multiple_lines for 2 items caused instability in issue #715
+        // because the member expression was inside a JSX element that was also checking for
+        // is_multiple_lines, leading to a cycle where one forcing the other to be multi-line
+        // caused the other to be multi-line, which caused the first to be multi-line.
+        if total_items_len > 2 {
+          items.push_condition(if_true_or(
+            "isMultipleLines",
+            Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
+            Signal::NewLine.into(),
+            Signal::PossibleNewLine.into(),
+          ));
+        } else {
+          items.push_signal(Signal::PossibleNewLine);
+        }
       }
     }
 
