@@ -1,0 +1,47 @@
+~~ memberExpression.linePerExpression: true, lineWidth: 40, indentWidth: 4 ~~
+== 3 items ==
+// 1. 3 elements, single line (fits)
+obj.prop1.prop2;
+
+// 2. 3 elements, spans multiple lines (forced by length)
+// The whole expression exceeds line width.
+// Since it spans multiple lines, all items should be on new lines.
+obj.prop1.longPropertyThatExceedsTheLineWidth;
+
+// 3. 3 elements, input multiline but fits -> should respect input newlines (consistent)
+obj
+  .prop1
+  .prop2;
+
+// 4. 3 elements, mixed input -> should respect input newlines (consistent)
+obj.prop1
+  .prop2;
+
+// 5. 3 elements, mixed input that overflows -> consistent
+obj.prop1
+  .longPropertyThatExceedsTheLineWidth;
+[expect]
+// 1. 3 elements, single line (fits)
+obj.prop1.prop2;
+
+// 2. 3 elements, spans multiple lines (forced by length)
+// The whole expression exceeds line width.
+// Since it spans multiple lines, all items should be on new lines.
+obj
+    .prop1
+    .longPropertyThatExceedsTheLineWidth;
+
+// 3. 3 elements, input multiline but fits -> should respect input newlines (consistent)
+obj
+    .prop1
+    .prop2;
+
+// 4. 3 elements, mixed input -> should respect input newlines (consistent)
+obj
+    .prop1
+    .prop2;
+
+// 5. 3 elements, mixed input that overflows -> consistent
+obj
+    .prop1
+    .longPropertyThatExceedsTheLineWidth;

@@ -8352,7 +8352,7 @@ fn gen_for_member_like_expr_item<'a>(item: &MemberLikeExprItem<'a>, context: &mu
 fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, context: &mut Context<'a>) -> PrintItems {
   let mut items = PrintItems::new();
   let member_expr_start_ln = LineNumber::new("memberExprStart");
-  let member_expr_last_item_start_ln = LineNumber::new("memberExprStartLastItem");
+  let member_expr_end_ln = LineNumber::new("memberExprEnd");
   let total_items_len = node.nodes.len();
 
   if total_items_len > 1 {
@@ -8379,7 +8379,7 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
         if total_items_len > 2 {
           items.push_condition(if_true_or(
             "isMultipleLines",
-            Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
+            Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_end_ln)),
             Signal::NewLine.into(),
             Signal::PossibleNewLine.into(),
           ));
@@ -8389,18 +8389,16 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
       }
     }
 
-    let is_last_item = i == total_items_len - 1;
-    if is_last_item {
-      // store this right before the last right expression
-      items.push_info(member_expr_last_item_start_ln);
-    }
-
     let generated_item = gen_for_member_like_expr_item(item, context, i, total_items_len);
     if item.is_computed() {
       items.push_condition(indent_if_start_of_line_or_start_of_line_indented(generated_item));
     } else {
       items.push_condition(conditions::indent_if_start_of_line(generated_item));
     }
+  }
+
+  if total_items_len > 1 {
+    items.push_info(member_expr_end_ln);
   }
 
   items
