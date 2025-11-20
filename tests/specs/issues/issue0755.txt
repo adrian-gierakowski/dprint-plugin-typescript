@@ -15,7 +15,8 @@ const func = (arg1: {
   (arg3: undefined): undefined => arg3
 
 == Example 2 ==
-const func = (
+const func =
+  (
     arg1: { a: number; b: number },
   ): (a: { c: number }) => (a: undefined) => undefined =>
   (arg2: { c: number }) =>
