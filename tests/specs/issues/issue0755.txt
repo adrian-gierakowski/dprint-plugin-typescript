@@ -13,3 +13,17 @@ const func = (arg1: {
   }) =>
   (arg2: { c: number }) =>
   (arg3: undefined): undefined => arg3
+
+== Example 2 ==
+const func = (
+    arg1: { a: number; b: number },
+  ): (a: { c: number }) => (a: undefined) => undefined =>
+  (arg2: { c: number }) =>
+  (arg3: undefined): undefined => arg3
+
+[expect]
+const func = (
+    arg1: { a: number; b: number },
+  ): (a: { c: number }) => (a: undefined) => undefined =>
+  (arg2: { c: number }) =>
+  (arg3: undefined): undefined => arg3
