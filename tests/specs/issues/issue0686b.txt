@@ -10,6 +10,14 @@ const func = () =>
       });
   };
 
+const func2 = () =>
+  function() {
+    return myObj
+      .myMethod({
+        missionType: otherObj.prop.nested,
+      });
+  };
+
 [expect]
 const func = () =>
   function() {
@@ -24,3 +32,10 @@ const func = () =>
       });
   };
 
+const func2 = () =>
+  function() {
+    return myObj
+      .myMethod({
+        missionType: otherObj.prop.nested,
+      });
+  };
