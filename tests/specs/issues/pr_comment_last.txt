@@ -1,0 +1,60 @@
+~~ lineWidth: 40, memberExpression.linePerExpression: true, memberExpression.allowMixedSingleLineStyleWithMultiLineMembers: last ~~
+== Case 1: func with multi-line args (last) ==
+func({
+a: 1,
+b: 2,
+}, {
+c: 3
+})
+
+[expect]
+func({
+    a: 1,
+    b: 2,
+}, {
+    c: 3,
+});
+
+== Case 2: func with mixed args (last) ==
+func(1, 2, {
+c: 3
+})
+
+[expect]
+func(1, 2, {
+    c: 3,
+});
+
+== Case 3: func with middle multi-line arg (last) ==
+func(1, {
+c: 3
+}, 3)
+
+[expect]
+func(1, {
+    c: 3,
+}, 3);
+
+== Case 4: Member expression with multi-line args (last) ==
+// The last member (func call) is multi-line.
+// 'last' allows mixed single line style if only the last member is multi-line.
+// Here, 'obj' is single line. 'func(...)' is multi-line.
+// So 'obj.func(...)' should be allowed on single line (chained).
+obj.func({
+a: 1,
+b: 2,
+}, {
+c: 3
+})
+
+[expect]
+// The last member (func call) is multi-line.
+// 'last' allows mixed single line style if only the last member is multi-line.
+// Here, 'obj' is single line. 'func(...)' is multi-line.
+// So 'obj.func(...)' should be allowed on single line (chained).
+obj.func({
+    a: 1,
+    b: 2,
+}, {
+    c: 3,
+});

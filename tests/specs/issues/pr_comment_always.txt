@@ -1,0 +1,52 @@
+~~ lineWidth: 40, memberExpression.linePerExpression: true, memberExpression.allowMixedSingleLineStyleWithMultiLineMembers: always ~~
+== Case 1: func with multi-line args (always) ==
+func({
+a: 1,
+b: 2,
+}, {
+c: 3
+})
+
+[expect]
+func({
+    a: 1,
+    b: 2,
+}, {
+    c: 3,
+});
+
+== Case 2: func with mixed args (always) ==
+func(1, 2, {
+c: 3
+})
+
+[expect]
+func(1, 2, {
+    c: 3,
+});
+
+== Case 3: func with middle multi-line arg (always) ==
+func(1, {
+c: 3
+}, 3)
+
+[expect]
+func(1, {
+    c: 3,
+}, 3);
+
+== Case 4: Member expression with multi-line args (always) ==
+obj.func({
+a: 1,
+b: 2,
+}, {
+c: 3
+})
+
+[expect]
+obj.func({
+    a: 1,
+    b: 2,
+}, {
+    c: 3,
+});
