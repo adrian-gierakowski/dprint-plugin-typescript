@@ -1680,12 +1680,21 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
         Rc::new(move |context| condition_helpers::is_multiple_lines(context, start_ln, end_ln)),
         {
           let mut items = PrintItems::new();
+          let mut inner_items = PrintItems::new();
           for (i, line) in lines.clone().into_iter().enumerate() {
             if i > 0 {
-              items.push_signal(Signal::NewLine);
+              inner_items.push_signal(Signal::NewLine);
             }
-            items.push_optional_path(line);
+            inner_items.push_optional_path(line);
           }
+
+          let inner_items = inner_items.into_rc_path();
+          items.push_condition(if_true_or(
+            "indentIfNotStartOfLine",
+            condition_resolvers::is_start_of_line(),
+            inner_items.clone().into(),
+            with_indent(inner_items.into()).into(),
+          ));
           items
         },
         {
