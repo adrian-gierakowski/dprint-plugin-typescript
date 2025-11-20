@@ -8361,9 +8361,29 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
 
   items.extend(gen_for_member_like_expr_item(&node.nodes[0], context, 0, total_items_len));
 
+  let should_force_multiline = match context.config.member_expression_allow_mixed_single_line_style_with_multi_line_members {
+    MemberExpressionMultiLineOptions::Always => false,
+    MemberExpressionMultiLineOptions::Never => node
+      .nodes
+      .iter()
+      .any(|n| n.start_line_fast(context.program) != n.end_line_fast(context.program)),
+    MemberExpressionMultiLineOptions::Last => {
+      if total_items_len > 1 {
+        node
+          .nodes
+          .iter()
+          .take(total_items_len - 1)
+          .any(|n| n.start_line_fast(context.program) != n.end_line_fast(context.program))
+      } else {
+        false
+      }
+    }
+  };
+
   for (i, item) in node.nodes.iter().enumerate().skip(1) {
-    let force_use_new_line =
-      !context.config.member_expression_prefer_single_line && node_helpers::get_use_new_lines_for_nodes(&node.nodes[i - 1], &node.nodes[i], context.program);
+    let force_use_new_line = should_force_multiline
+      || !context.config.member_expression_prefer_single_line
+        && node_helpers::get_use_new_lines_for_nodes(&node.nodes[i - 1], &node.nodes[i], context.program);
     if item.is_optional() || !item.is_computed() {
       if force_use_new_line {
         items.push_signal(Signal::NewLine);

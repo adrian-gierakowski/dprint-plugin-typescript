@@ -103,6 +103,12 @@ pub fn resolve_config(config: ConfigKeyMap, global_config: &GlobalConfiguration)
     jsx_opening_element_bracket_position: get_value(&mut config, "jsxOpeningElement.bracketPosition", jsx_bracket_position, &mut diagnostics),
     jsx_self_closing_element_bracket_position: get_value(&mut config, "jsxSelfClosingElement.bracketPosition", jsx_bracket_position, &mut diagnostics),
     member_expression_line_per_expression: get_value(&mut config, "memberExpression.linePerExpression", false, &mut diagnostics),
+    member_expression_allow_mixed_single_line_style_with_multi_line_members: get_value(
+      &mut config,
+      "memberExpression.allowMixedSingleLineStyleWithMultiLineMembers",
+      MemberExpressionMultiLineOptions::Always,
+      &mut diagnostics,
+    ),
     type_literal_separator_kind_single_line: get_value(
       &mut config,
       "typeLiteral.separatorKind.singleLine",

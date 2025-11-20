@@ -509,6 +509,15 @@ impl ConfigurationBuilder {
     self.insert("memberExpression.linePerExpression", value.into())
   }
 
+  /// Whether to allow mixed single line style with multi line members.
+  ///
+  /// * `always` (default) - Allows mixed single line style with multi line members.
+  /// * `last` - Allows mixed single line style with multi line members only if the last member is multi-line.
+  /// * `never` - Does not allow mixed single line style with multi line members.
+  pub fn member_expression_allow_mixed_single_line_style_with_multi_line_members(&mut self, value: MemberExpressionMultiLineOptions) -> &mut Self {
+    self.insert("memberExpression.allowMixedSingleLineStyleWithMultiLineMembers", value.to_string().into())
+  }
+
   /// The kind of separator to use in type literals.
   pub fn type_literal_separator_kind(&mut self, value: SemiColonOrComma) -> &mut Self {
     self.insert("typeLiteral.separatorKind", value.to_string().into())
@@ -1123,6 +1132,7 @@ mod tests {
       .binary_expression_line_per_expression(false)
       .conditional_expression_line_per_expression(true)
       .member_expression_line_per_expression(false)
+      .member_expression_allow_mixed_single_line_style_with_multi_line_members(MemberExpressionMultiLineOptions::Always)
       .type_literal_separator_kind(SemiColonOrComma::Comma)
       .type_literal_separator_kind_single_line(SemiColonOrComma::Comma)
       .type_literal_separator_kind_multi_line(SemiColonOrComma::Comma)
@@ -1297,7 +1307,7 @@ mod tests {
       .while_statement_space_around(true);
 
     let inner_config = config.get_inner_config();
-    assert_eq!(inner_config.len(), 182);
+    assert_eq!(inner_config.len(), 183);
     let diagnostics = resolve_config(inner_config, &Default::default()).diagnostics;
     assert_eq!(diagnostics.len(), 0);
   }

@@ -1,0 +1,46 @@
+~~ lineWidth: 40, memberExpression.linePerExpression: true, memberExpression.allowMixedSingleLineStyleWithMultiLineMembers: never ~~
+== Case 1: No newline before first element, no multi-line elements, all fit on single line. ==
+testing.this.out;
+
+[expect]
+testing.this.out;
+
+== Case 2: Multi-line element in the middle. ==
+obj.method(arg1).method2(() => {
+    return true;
+}).method3();
+
+[expect]
+obj
+    .method(arg1)
+    .method2(() => {
+        return true;
+    })
+    .method3();
+
+== Case 3: Multiple single-line elements followed by multi-line. ==
+obj.prop.method().method2(() => {
+    return true;
+});
+
+[expect]
+obj
+    .prop
+    .method()
+    .method2(() => {
+        return true;
+    });
+
+== Case 4: Multi-line due to function call spanning multiple lines ==
+obj.method(
+    arg1,
+    arg2
+).method2();
+
+[expect]
+obj
+    .method(
+        arg1,
+        arg2,
+    )
+    .method2();

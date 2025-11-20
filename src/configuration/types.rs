@@ -307,6 +307,16 @@ pub enum NamedTypeImportsExportsOrder {
 
 generate_str_to_from![NamedTypeImportsExportsOrder, [First, "first"], [Last, "last"], [None, "none"]];
 
+#[derive(Clone, PartialEq, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MemberExpressionMultiLineOptions {
+  Always,
+  Last,
+  Never,
+}
+
+generate_str_to_from![MemberExpressionMultiLineOptions, [Always, "always"], [Last, "last"], [Never, "never"]];
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Configuration {
@@ -337,6 +347,8 @@ pub struct Configuration {
   pub jsx_self_closing_element_bracket_position: SameOrNextLinePosition,
   #[serde(rename = "memberExpression.linePerExpression")]
   pub member_expression_line_per_expression: bool,
+  #[serde(rename = "memberExpression.allowMixedSingleLineStyleWithMultiLineMembers")]
+  pub member_expression_allow_mixed_single_line_style_with_multi_line_members: MemberExpressionMultiLineOptions,
   #[serde(rename = "typeLiteral.separatorKind.singleLine")]
   pub type_literal_separator_kind_single_line: SemiColonOrComma,
   #[serde(rename = "typeLiteral.separatorKind.multiLine")]
