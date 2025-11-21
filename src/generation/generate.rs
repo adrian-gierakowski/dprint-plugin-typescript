@@ -2976,6 +2976,7 @@ fn gen_sequence_expr<'a>(node: &SeqExpr<'a>, context: &mut Context<'a>) -> Print
       multi_line_options: ir_helpers::MultiLineOptions::same_line_start_hanging_indent(),
       force_possible_newline_at_start: false,
       node_sorter: None,
+      indent_width: None,
     },
     context,
   )
@@ -4046,6 +4047,7 @@ fn gen_jsx_opening_element<'a>(node: &JSXOpeningElement<'a>, context: &mut Conte
         multi_line_options,
         force_possible_newline_at_start: false,
         node_sorter: None,
+        indent_width: Some(0),
       },
       context,
     ));
@@ -5555,6 +5557,7 @@ fn gen_var_declarators<'a>(parent: Node<'a>, decls: &[&'a VarDeclarator<'a>], co
         multi_line_options: ir_helpers::MultiLineOptions::same_line_start_hanging_indent(),
         force_possible_newline_at_start: false,
         node_sorter: None,
+        indent_width: None,
       },
       context,
     )
@@ -6356,6 +6359,7 @@ fn gen_type_parameters<'a>(node: TypeParamNode<'a>, context: &mut Context<'a>) -
       multi_line_options: ir_helpers::MultiLineOptions::surround_newlines_indented(),
       force_possible_newline_at_start: false,
       node_sorter: None,
+        indent_width: None,
     },
     context,
   ));
@@ -7124,6 +7128,7 @@ fn gen_array_like_nodes<'a>(opts: GenArrayLikeNodesOptions<'a>, context: &mut Co
           multi_line_options: ir_helpers::MultiLineOptions::surround_newlines_indented(),
           force_possible_newline_at_start: false,
           node_sorter: None,
+        indent_width: None,
         },
         context,
       )
@@ -7612,6 +7617,7 @@ where
             },
             force_possible_newline_at_start: is_parameters,
             node_sorter: None,
+      indent_width: None,
           },
           context,
         ));
@@ -7836,6 +7842,7 @@ struct GenSeparatedValuesParams<'a> {
   multi_line_options: ir_helpers::MultiLineOptions,
   force_possible_newline_at_start: bool,
   node_sorter: Option<Box<dyn Fn((usize, Option<Node<'a>>), (usize, Option<Node<'a>>), Program<'a>) -> std::cmp::Ordering>>,
+  indent_width: Option<u8>,
 }
 
 enum NodeOrSeparator<'a> {
@@ -7876,7 +7883,7 @@ fn gen_separated_values<'a>(opts: GenSeparatedValuesParams<'a>, context: &mut Co
 fn gen_separated_values_with_result<'a>(opts: GenSeparatedValuesParams<'a>, context: &mut Context<'a>) -> GenSeparatedValuesResult {
   let nodes = opts.nodes;
   let separator = opts.separator;
-  let indent_width = context.config.indent_width;
+  let indent_width = opts.indent_width.unwrap_or(context.config.indent_width);
   let compute_lines_span = opts.allow_blank_lines; // save time otherwise
   let node_sorter = opts.node_sorter;
 
@@ -8211,6 +8218,7 @@ fn gen_extends_or_implements<'a>(opts: GenExtendsOrImplementsOptions<'a>, contex
         multi_line_options: ir_helpers::MultiLineOptions::new_line_start(),
         force_possible_newline_at_start: false,
         node_sorter: None,
+        indent_width: None,
       },
       context,
     ));
@@ -8269,6 +8277,7 @@ fn gen_object_like_node<'a>(opts: GenObjectLikeNodeOptions<'a>, context: &mut Co
             multi_line_options: ir_helpers::MultiLineOptions::surround_newlines_indented(),
             force_possible_newline_at_start: false,
             node_sorter: opts.node_sorter,
+      indent_width: None,
           },
           context,
         )
@@ -8361,21 +8370,23 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
 
   items.extend(gen_for_member_like_expr_item(&node.nodes[0], context, 0, total_items_len));
 
+  let should_use_line_per_expression = context.config.member_expression_line_per_expression;
+  let should_force_multi_line = should_use_line_per_expression
+    && !context.config.member_expression_prefer_single_line
+    && (1..total_items_len).any(|i| node_helpers::get_use_new_lines_for_nodes(&node.nodes[i - 1], &node.nodes[i], context.program));
+
   for (i, item) in node.nodes.iter().enumerate().skip(1) {
     let force_use_new_line =
       !context.config.member_expression_prefer_single_line && node_helpers::get_use_new_lines_for_nodes(&node.nodes[i - 1], &node.nodes[i], context.program);
     if item.is_optional() || !item.is_computed() {
       if force_use_new_line {
         items.push_signal(Signal::NewLine);
-      } else if !context.config.member_expression_line_per_expression {
+      } else if !should_use_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
+      } else if should_force_multi_line {
+        items.push_signal(Signal::NewLine);
       } else {
-        items.push_condition(if_true_or(
-          "isMultipleLines",
-          Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
-          Signal::NewLine.into(),
-          Signal::PossibleNewLine.into(),
-        ));
+        items.push_signal(Signal::PossibleNewLine);
       }
     }
 
@@ -8393,7 +8404,11 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
     }
   }
 
-  items
+  if should_use_line_per_expression {
+    ir_helpers::new_line_group(items)
+  } else {
+    items
+  }
 }
 
 struct GenComputedPropLikeOptions {
@@ -8477,6 +8492,7 @@ fn gen_decorators<'a>(decorators: &[&'a Decorator<'a>], is_inline: bool, context
       multi_line_options: ir_helpers::MultiLineOptions::same_line_no_indent(),
       force_possible_newline_at_start: false,
       node_sorter: None,
+        indent_width: None,
     },
     context,
   );
