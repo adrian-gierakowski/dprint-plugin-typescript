@@ -21,9 +21,10 @@ testing.this.out;
 
 == should go multi-line once one of the nodes are on different lines ==
 testing
-    .this.out;
-testing.this
+    .this
     .out;
+testing
+    .this.out;
 
 [expect]
 testing

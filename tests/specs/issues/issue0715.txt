@@ -9,6 +9,12 @@ coooooooooooooooooooooooooooooooooodition && (
 
 coooooooooooooooooooooooooooooooooodition && (
   <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
+
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
     <Text size={TextSize.L}>
       Lorem ipsum
     </Text>
@@ -34,6 +40,11 @@ cooooooooooooooooooooooooooooooooooodition && (
   </div>
 );
 
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
 
 cooooooooooooooooooooooooooooooooooodition && (
   <div style={{ marginTop: "20px" }}>
@@ -63,6 +74,12 @@ coooooooooooooooooooooooooooooooooodition && (
 
 coooooooooooooooooooooooooooooooooodition && (
   <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
+
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
     <Text size={TextSize.L}>
       Lorem ipsum
     </Text>
@@ -88,6 +105,11 @@ cooooooooooooooooooooooooooooooooooodition && (
   </div>
 );
 
+cooooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
 
 cooooooooooooooooooooooooooooooooooodition && (
   <div style={{ marginTop: "20px" }}>

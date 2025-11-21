@@ -8352,7 +8352,7 @@ fn gen_for_member_like_expr_item<'a>(item: &MemberLikeExprItem<'a>, context: &mu
 fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, context: &mut Context<'a>) -> PrintItems {
   let mut items = PrintItems::new();
   let member_expr_start_ln = LineNumber::new("memberExprStart");
-  let member_expr_last_item_start_ln = LineNumber::new("memberExprStartLastItem");
+  let member_expr_end_ln = LineNumber::new("memberExprEnd");
   let total_items_len = node.nodes.len();
 
   if total_items_len > 1 {
@@ -8370,19 +8370,28 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
       } else if !context.config.member_expression_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
       } else {
-        items.push_condition(if_true_or(
-          "isMultipleLines",
-          Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
-          Signal::NewLine.into(),
-          Signal::PossibleNewLine.into(),
-        ));
+        // We only want to check for is_multiple_lines when the node is definitely above the line width
+        // or we're forcing new lines.
+        // Checking for is_multiple_lines for short member expressions caused instability in issue #715
+        // because the member expression was inside a JSX element that was also checking for
+        // is_multiple_lines, leading to a cycle where one forcing the other to be multi-line
+        // caused the other to be multi-line, which caused the first to be multi-line.
+        let check_multiple_lines = force_use_new_line
+          || is_node_definitely_above_line_width(
+            SourceRange::new(node.nodes[0].start(), node.nodes.last().unwrap().end()),
+            context,
+          );
+        if check_multiple_lines {
+          items.push_condition(if_true_or(
+            "isMultipleLines",
+            Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_end_ln)),
+            Signal::NewLine.into(),
+            Signal::PossibleNewLine.into(),
+          ));
+        } else {
+          items.push_signal(Signal::PossibleNewLine);
+        }
       }
-    }
-
-    let is_last_item = i == total_items_len - 1;
-    if is_last_item {
-      // store this right before the last right expression
-      items.push_info(member_expr_last_item_start_ln);
     }
 
     let generated_item = gen_for_member_like_expr_item(item, context, i, total_items_len);
@@ -8391,6 +8400,10 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
     } else {
       items.push_condition(conditions::indent_if_start_of_line(generated_item));
     }
+  }
+
+  if total_items_len > 1 {
+    items.push_info(member_expr_end_ln);
   }
 
   items
