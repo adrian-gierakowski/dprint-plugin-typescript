@@ -1664,6 +1664,7 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
       lines.push(items);
     }
 
+    let body_items = gen_arrow_body(last_arrow, last_header_start_lsil.unwrap(), context).into_rc_path();
     let mut items = PrintItems::new();
     if force_use_new_lines {
       let mut inner = PrintItems::new();
@@ -1673,6 +1674,8 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
         }
         inner.extend(line);
       }
+      inner = ir_helpers::new_line_group(inner);
+      inner.push_optional_path(body_items);
 
       if should_force_newline_at_start {
         let inner = inner.into_rc_path();
@@ -1711,6 +1714,9 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
             }
             inner.push_optional_path(line);
           }
+          inner.push_info(end_ln);
+          inner = ir_helpers::new_line_group(inner);
+          inner.push_optional_path(body_items.clone());
 
           if should_force_newline_at_start {
             let inner = inner.into_rc_path();
@@ -1731,21 +1737,21 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
           items
         },
         {
-          let mut items = PrintItems::new();
+          let mut inner = PrintItems::new();
           for (i, line) in lines.into_iter().enumerate() {
             if i > 0 {
-              items.push_signal(Signal::SpaceOrNewLine);
+              inner.push_signal(Signal::SpaceOrNewLine);
             }
-            items.push_optional_path(line);
+            inner.push_optional_path(line);
           }
-          items
+          inner.push_info(end_ln);
+          inner = ir_helpers::new_line_group(inner);
+          inner.push_optional_path(body_items);
+          inner
         },
       ));
-      items.push_info(end_ln);
     }
 
-    let mut items = ir_helpers::new_line_group(items);
-    items.extend(gen_arrow_body(last_arrow, last_header_start_lsil.unwrap(), context));
     items
   }
 
