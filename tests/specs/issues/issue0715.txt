@@ -71,7 +71,7 @@ coooooooooooooooooooooooooooooooooodition && (
   </div>
 );
 
-== two member forced into into multi line due to line length: correct formatting: incorrect formatting due to extra char in first line ==
+== two member forced into into multi line due to line length: incorrect formatting due to extra char in first line ==
 coooooooooooooooooooooooooooooooooodition_ && (
   <div style={{ marginTop: "20px" }}>
     <Text size={TextSize.L.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB}>Lorem ipsum</Text>
