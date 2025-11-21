@@ -1638,6 +1638,12 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
   }
 
   fn gen_curried_arrow<'a>(node: CurriedArrowExpr<'a>, context: &mut Context<'a>) -> PrintItems {
+    let should_force_newline_at_start = {
+      let first_arrow = node.signatures.first().unwrap().inner;
+      let parent = first_arrow.parent();
+      matches!(parent.kind(), NodeKind::VarDeclarator | NodeKind::AssignExpr)
+    };
+
     let mut last_header_start_lsil = None;
     let mut force_use_new_lines = false;
     let last_arrow = node.last_arrow();
@@ -1658,13 +1664,34 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
       lines.push(items);
     }
 
+    let body_items = gen_arrow_body(last_arrow, last_header_start_lsil.unwrap(), context).into_rc_path();
     let mut items = PrintItems::new();
     if force_use_new_lines {
+      let mut inner = PrintItems::new();
       for (i, line) in lines.into_iter().enumerate() {
         if i > 0 {
-          items.push_signal(Signal::NewLine);
+          inner.push_signal(Signal::NewLine);
         }
-        items.extend(line);
+        inner.extend(line);
+      }
+      inner = ir_helpers::new_line_group(inner);
+      inner.push_optional_path(body_items);
+
+      if should_force_newline_at_start {
+        let inner = inner.into_rc_path();
+        items.push_condition(if_true_or(
+          "indentIfHugging",
+          condition_resolvers::is_start_of_line(),
+          inner.clone().into(),
+          {
+            let mut items = PrintItems::new();
+            items.push_signal(Signal::ExpectNewLine);
+            items.extend(with_indent(inner.into()));
+            items
+          },
+        ));
+      } else {
+        items.extend(inner);
       }
     } else {
       let start_ln = LineNumber::new("startCurry");
@@ -1680,30 +1707,51 @@ fn gen_arrow_func_expr<'a>(node: &'a ArrowExpr<'a>, context: &mut Context<'a>) -
         Rc::new(move |context| condition_helpers::is_multiple_lines(context, start_ln, end_ln)),
         {
           let mut items = PrintItems::new();
+          let mut inner = PrintItems::new();
           for (i, line) in lines.clone().into_iter().enumerate() {
             if i > 0 {
-              items.push_signal(Signal::NewLine);
+              inner.push_signal(Signal::NewLine);
             }
-            items.push_optional_path(line);
+            inner.push_optional_path(line);
+          }
+          inner.push_info(end_ln);
+          inner = ir_helpers::new_line_group(inner);
+          inner.push_optional_path(body_items.clone());
+
+          if should_force_newline_at_start {
+            let inner = inner.into_rc_path();
+            items.push_condition(if_true_or(
+              "indentIfHugging",
+              condition_resolvers::is_start_of_line(),
+              inner.clone().into(),
+              {
+                let mut items = PrintItems::new();
+                items.push_signal(Signal::ExpectNewLine);
+                items.extend(with_indent(inner.into()));
+                items
+              },
+            ));
+          } else {
+            items.extend(inner);
           }
           items
         },
         {
-          let mut items = PrintItems::new();
+          let mut inner = PrintItems::new();
           for (i, line) in lines.into_iter().enumerate() {
             if i > 0 {
-              items.push_signal(Signal::SpaceOrNewLine);
+              inner.push_signal(Signal::SpaceOrNewLine);
             }
-            items.push_optional_path(line);
+            inner.push_optional_path(line);
           }
-          items
+          inner.push_info(end_ln);
+          inner = ir_helpers::new_line_group(inner);
+          inner.push_optional_path(body_items);
+          inner
         },
       ));
-      items.push_info(end_ln);
     }
 
-    let mut items = ir_helpers::new_line_group(items);
-    items.extend(gen_arrow_body(last_arrow, last_header_start_lsil.unwrap(), context));
     items
   }
 
