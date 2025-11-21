@@ -7,8 +7,7 @@ const func =
   (arg3: undefined): undefined => arg3
 
 [expect]
-const func =
-  (arg1: {
+const func = (arg1: {
     a: number
     b: number
   }) =>
@@ -24,59 +23,24 @@ const func =
   (arg3: undefined): undefined => arg3
 
 [expect]
-const func =
-  (
+const func = (
     arg1: { a: number; b: number },
   ): (a: { c: number }) => (a: undefined) => undefined =>
   (arg2: { c: number }) =>
   (arg3: undefined): undefined => arg3
 
 == Example 3 ==
-const func =
-  () =>
-  (arg1: { a: number; b: number }) =>
-  (arg2: { c: number }) =>
-  (arg3: undefined): undefined => arg3
-
-[expect]
-const func =
-  () =>
-  (arg1: { a: number; b: number }) =>
-  (arg2: { c: number }) =>
-  (arg3: undefined): undefined => arg3
-
-== Example 4 ==
-const func =
-  () =>
-  (arg1: {
-    a: number; b: number }) =>
-  (arg2: { c: number }) =>
-  (arg3: undefined): undefined => arg3
-
-[expect]
-const func =
-  () =>
-  (arg1: {
-    a: number
-    b: number
+const func = a =>
+  (b: {
+    long: string;
+    type: number;
   }) =>
-  (arg2: { c: number }) =>
-  (arg3: undefined): undefined => arg3
-
-== Example 5 ==
-const func =
-  (arg2: { c: number }) =>
-  (
-    arg1: number,
-    b: number,
-  ) =>
-  (arg3: undefined): undefined => arg3
+  c => d
 
 [expect]
-const func =
-  (arg2: { c: number }) =>
-  (
-    arg1: number,
-    b: number,
-  ) =>
-  (arg3: undefined): undefined => arg3
+const func = a =>
+  (b: {
+    long: string
+    type: number
+  }) =>
+  c => d
