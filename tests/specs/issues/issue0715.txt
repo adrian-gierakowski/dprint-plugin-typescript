@@ -1,0 +1,142 @@
+~~ lineWidth: 80, indentWidth: 2, memberExpression.linePerExpression: true ~~
+== two member: correct formatting ==
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+== one member: incorrect formatting due to extra char in first line ==
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L}>Lorem ipsum</Text>
+  </div>
+);
+
+== two member: correct formatting ==
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
+
+== two member: incorrect formatting due to extra char in first line ==
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.B}>Lorem ipsum</Text>
+  </div>
+);
+
+== two member forced into into multi line due to line length: correct formatting ==
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB}>Lorem ipsum</Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB}>
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+== two member forced into into multi line due to line length: correct formatting: incorrect formatting due to extra char in first line ==
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB}>Lorem ipsum</Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text size={TextSize.L.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB}>
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+== two member multi line format due to newline between members: correct formatting ==
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize
+        .L.B}
+      color={Color.L.B}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize
+        .L
+        .B}
+      color={Color.L.B}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+== two member multi line format due to newline between members: incorrect formatting color due to extra char in first line ==
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize
+        .L.B}
+      color={Color.L.B}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
+
+[expect]
+coooooooooooooooooooooooooooooooooodition_ && (
+  <div style={{ marginTop: "20px" }}>
+    <Text
+      size={TextSize
+        .L
+        .B}
+      color={Color.L.B}
+    >
+      Lorem ipsum
+    </Text>
+  </div>
+);
