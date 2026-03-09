@@ -23,18 +23,18 @@ tracing = ["formatting"]
 all-features = true
 
 [dependencies]
-anyhow.workspace = true
+anyhow = "1.0.64"
 async-trait = { version = "0.1.72", optional = true }
 bumpalo = { version = "3.17.0", features = ["allocator-api2", "collections"], optional = true }
 crossbeam-channel = { version = "0.5.14", optional = true }
 futures = { version = "0.3.26", optional = true }
 hashbrown = { version = "0.15.2", optional = true }
-indexmap.workspace = true
+indexmap = "1.9.1"
 parking_lot = { version = "0.12.1", optional = true }
 rustc-hash = { version = "2.1.0", optional = true }
-serde.workspace = true
-serde_json = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
+serde = { version = "1.0.144", features = ["derive"] }
+serde_json = { version = "1.0", optional = true }
+tokio = { version = "1.21.2", features = ["rt", "macros"], optional = true }
 tokio-util = { version = "0.7.7", optional = true }
 unicode-width = { version = "0.2.0", optional = true }
 

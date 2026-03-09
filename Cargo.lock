@@ -278,13 +278,11 @@ dependencies = [
 [[package]]
 name = "dprint-core"
 version = "0.67.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c1d827947704a9495f705d6aeed270fa21a67f825f22902c28f38dc3af7a9ae"
 dependencies = [
  "anyhow",
  "bumpalo",
  "hashbrown 0.15.5",
- "indexmap 2.11.0",
+ "indexmap 1.9.3",
  "rustc-hash 2.1.1",
  "serde",
  "serde_json",
@@ -594,7 +592,6 @@ checksum = "f2481980430f9f78649238835720ddccc57e52df14ffce1c6f37391d61b563e9"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.5",
- "serde",
 ]
 
 [[package]]

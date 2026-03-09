@@ -10,6 +10,15 @@ use super::thread_state;
 use super::thread_state::BumpAllocator;
 use super::writer::*;
 
+impl<'a> SavePoint<'a> {
+  pub fn name(&self) -> &'static str {
+    #[cfg(debug_assertions)]
+    return self.name;
+    #[cfg(not(debug_assertions))]
+    return "save_point";
+  }
+}
+
 pub struct SavePoint<'a> {
   #[cfg(debug_assertions)]
   /// Name for debugging purposes.
@@ -53,6 +62,11 @@ pub struct Printer<'a> {
   current_node: Option<PrintItemPath>,
   writer: Writer<'a>,
   // Use a hash map here because only some conditions are stored (not all).
+  //
+  // NOTE (Bug Investigation): These caches are NOT cleared or rolled back when
+  // state is restored from a SavePoint. This leads to "cache pollution" where
+  // resolutions from a tentative format (e.g. during look-ahead or before a
+  // line-wrap restoration) persist and incorrectly affect subsequent formatting.
   resolved_conditions: BumpHashMap<'a, u32, Option<bool>>,
   // Use these "VecU32Map" for resolved infos because it has much faster
   // lookups than a hash map and generally infos seem to be resolved
@@ -349,6 +363,8 @@ impl<'a> Printer<'a> {
   }
 
   fn update_state_to_save_point(&mut self, save_point: &'a SavePoint<'a>, is_for_new_line: bool) {
+    // NOTE (Bug Investigation): self.writer.set_state() restores the writer's line/column
+    // and written items, but it does NOT restore the resolved_* caches in the Printer.
     self.writer.set_state(save_point.writer_state.clone());
     self.possible_new_line_save_point = if is_for_new_line { None } else { save_point.possible_new_line_save_point };
     self.current_node = save_point.node;
