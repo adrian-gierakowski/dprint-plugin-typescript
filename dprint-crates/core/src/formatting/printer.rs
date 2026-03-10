@@ -574,60 +574,80 @@ impl<'a> Printer<'a> {
     match info {
       Info::LineNumber(line_number) => {
         let line_number_id = line_number.unique_id();
+        let value = self.writer.line_number();
         self.resolution_log.push(ResolutionState::LineNumber(line_number_id, self.resolved_line_numbers.get(line_number_id)));
-        self.resolved_line_numbers.insert(line_number_id, self.writer.line_number());
+        self.resolved_line_numbers.insert(line_number_id, value);
         let option_save_point = self.look_ahead_line_number_save_points.remove(&line_number_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
+          // Re-apply
+          self.resolution_log.push(ResolutionState::LineNumber(line_number_id, self.resolved_line_numbers.get(line_number_id)));
+          self.resolved_line_numbers.insert(line_number_id, value);
         }
       }
       Info::ColumnNumber(column_number) => {
         let column_number_id = column_number.unique_id();
+        let value = self.writer.column_number();
         self.resolution_log.push(ResolutionState::ColumnNumber(column_number_id, self.resolved_column_numbers.get(column_number_id)));
-        self.resolved_column_numbers.insert(column_number_id, self.writer.column_number());
+        self.resolved_column_numbers.insert(column_number_id, value);
         let option_save_point = self.look_ahead_column_number_save_points.remove(&column_number_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
+          // Re-apply
+          self.resolution_log.push(ResolutionState::ColumnNumber(column_number_id, self.resolved_column_numbers.get(column_number_id)));
+          self.resolved_column_numbers.insert(column_number_id, value);
         }
       }
       Info::IsStartOfLine(is_start_of_line) => {
         let is_start_of_line_id = is_start_of_line.unique_id();
+        let value = self.writer.is_start_of_line();
         self.resolution_log.push(ResolutionState::IsStartOfLine(is_start_of_line_id, self.resolved_is_start_of_lines.get(is_start_of_line_id)));
-        self.resolved_is_start_of_lines.insert(is_start_of_line_id, self.writer.is_start_of_line());
+        self.resolved_is_start_of_lines.insert(is_start_of_line_id, value);
         let option_save_point = self.look_ahead_is_start_of_line_save_points.remove(&is_start_of_line_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
+          // Re-apply
+          self.resolution_log.push(ResolutionState::IsStartOfLine(is_start_of_line_id, self.resolved_is_start_of_lines.get(is_start_of_line_id)));
+          self.resolved_is_start_of_lines.insert(is_start_of_line_id, value);
         }
       }
       Info::IndentLevel(indent_level) => {
         let indent_level_id = indent_level.unique_id();
+        let value = self.writer.indent_level();
         self.resolution_log.push(ResolutionState::IndentLevel(indent_level_id, self.resolved_indent_levels.get(indent_level_id)));
-        self.resolved_indent_levels.insert(indent_level_id, self.writer.indent_level());
+        self.resolved_indent_levels.insert(indent_level_id, value);
         let option_save_point = self.look_ahead_indent_level_save_points.remove(&indent_level_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
+          // Re-apply
+          self.resolution_log.push(ResolutionState::IndentLevel(indent_level_id, self.resolved_indent_levels.get(indent_level_id)));
+          self.resolved_indent_levels.insert(indent_level_id, value);
         }
       }
       Info::LineStartColumnNumber(line_start_column_number) => {
         let line_start_column_number_id = line_start_column_number.unique_id();
+        let value = self.writer.line_start_column_number();
         self.resolution_log.push(ResolutionState::LineStartColumnNumber(line_start_column_number_id, self.resolved_line_start_column_numbers.get(line_start_column_number_id)));
-        self
-          .resolved_line_start_column_numbers
-          .insert(line_start_column_number_id, self.writer.line_start_column_number());
+        self.resolved_line_start_column_numbers.insert(line_start_column_number_id, value);
         let option_save_point = self.look_ahead_line_start_column_number_save_points.remove(&line_start_column_number_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
+          // Re-apply
+          self.resolution_log.push(ResolutionState::LineStartColumnNumber(line_start_column_number_id, self.resolved_line_start_column_numbers.get(line_start_column_number_id)));
+          self.resolved_line_start_column_numbers.insert(line_start_column_number_id, value);
         }
       }
       Info::LineStartIndentLevel(line_start_indent_level) => {
         let line_start_indent_level_id = line_start_indent_level.unique_id();
+        let value = self.writer.line_start_indent_level();
         self.resolution_log.push(ResolutionState::LineStartIndentLevel(line_start_indent_level_id, self.resolved_line_start_indent_levels.get(line_start_indent_level_id)));
-        self
-          .resolved_line_start_indent_levels
-          .insert(line_start_indent_level_id, self.writer.line_start_indent_level());
+        self.resolved_line_start_indent_levels.insert(line_start_indent_level_id, value);
         let option_save_point = self.look_ahead_line_start_indent_level_save_points.remove(&line_start_indent_level_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
+          // Re-apply
+          self.resolution_log.push(ResolutionState::LineStartIndentLevel(line_start_indent_level_id, self.resolved_line_start_indent_levels.get(line_start_indent_level_id)));
+          self.resolved_line_start_indent_levels.insert(line_start_indent_level_id, value);
         }
       }
     }
@@ -679,11 +699,14 @@ impl<'a> Printer<'a> {
       self.resolved_conditions.insert(condition_id, condition_value);
     }
 
-    let save_point = self.look_ahead_condition_save_points.get(&condition_id);
-    if condition_value.is_some() && save_point.is_some() {
-      let save_point = self.look_ahead_condition_save_points.remove(&condition_id);
-      self.update_state_to_save_point(save_point.unwrap(), false);
-      return;
+    if let Some(value) = condition_value {
+      if let Some(save_point) = self.look_ahead_condition_save_points.remove(&condition_id) {
+        self.update_state_to_save_point(save_point, false);
+        // Re-apply
+        self.resolution_log.push(ResolutionState::Condition(condition_id, self.resolved_conditions.get(&condition_id).cloned()));
+        self.resolved_conditions.insert(condition_id, Some(value));
+        return;
+      }
     }
 
     if condition_value.is_some() && condition_value.unwrap() {
@@ -911,6 +934,91 @@ mod tests {
 
             // Cache should be rolled back to initial value
             assert_eq!(printer.resolved_conditions.get(&condition_id).unwrap().unwrap(), false);
+        });
+    }
+
+    #[test]
+    fn it_should_rollback_all_info_types() {
+        thread_state::with_bump_allocator(|bump| {
+            let anchor_id = thread_state::next_line_number_anchor_id();
+            let line_id = thread_state::next_line_number_id();
+            let col_id = thread_state::next_column_number_id();
+            let is_start_id = thread_state::next_is_start_of_line_id();
+            let indent_id = thread_state::next_indent_level_id();
+            let line_start_col_id = thread_state::next_line_start_column_number_id();
+            let line_start_indent_id = thread_state::next_line_start_indent_level_id();
+
+            let options = PrinterOptions {
+                max_width: 80,
+                indent_width: 2,
+                #[cfg(feature = "tracing")]
+                enable_tracing: false,
+            };
+            let mut printer = Printer::new(bump, None, options);
+
+            let save_point = printer.create_save_point("test", None);
+
+            printer.resolution_log.push(ResolutionState::LineNumberAnchor(anchor_id, None));
+            printer.resolved_line_number_anchors.insert(anchor_id, 1);
+            printer.resolution_log.push(ResolutionState::LineNumber(line_id, None));
+            printer.resolved_line_numbers.insert(line_id, 2);
+            printer.resolution_log.push(ResolutionState::ColumnNumber(col_id, None));
+            printer.resolved_column_numbers.insert(col_id, 3);
+            printer.resolution_log.push(ResolutionState::IsStartOfLine(is_start_id, None));
+            printer.resolved_is_start_of_lines.insert(is_start_id, true);
+            printer.resolution_log.push(ResolutionState::IndentLevel(indent_id, None));
+            printer.resolved_indent_levels.insert(indent_id, 4);
+            printer.resolution_log.push(ResolutionState::LineStartColumnNumber(line_start_col_id, None));
+            printer.resolved_line_start_column_numbers.insert(line_start_col_id, 5);
+            printer.resolution_log.push(ResolutionState::LineStartIndentLevel(line_start_indent_id, None));
+            printer.resolved_line_start_indent_levels.insert(line_start_indent_id, 6);
+
+            printer.update_state_to_save_point(save_point, false);
+
+            assert!(printer.resolved_line_number_anchors.get(anchor_id).is_none());
+            assert!(printer.resolved_line_numbers.get(line_id).is_none());
+            assert!(printer.resolved_column_numbers.get(col_id).is_none());
+            assert!(printer.resolved_is_start_of_lines.get(is_start_id).is_none());
+            assert!(printer.resolved_indent_levels.get(indent_id).is_none());
+            assert!(printer.resolved_line_start_column_numbers.get(line_start_col_id).is_none());
+            assert!(printer.resolved_line_start_indent_levels.get(line_start_indent_id).is_none());
+        });
+    }
+
+    #[test]
+    fn it_should_handle_nested_rollback() {
+        thread_state::with_bump_allocator(|bump| {
+            let options = PrinterOptions {
+                max_width: 80,
+                indent_width: 2,
+                #[cfg(feature = "tracing")]
+                enable_tracing: false,
+            };
+            let mut printer = Printer::new(bump, None, options);
+
+            let id1 = 1;
+            let id2 = 2;
+
+            let sp1 = printer.create_save_point("sp1", None);
+            printer.resolution_log.push(ResolutionState::Condition(id1, None));
+            printer.resolved_conditions.insert(id1, Some(true));
+
+            let sp2 = printer.create_save_point("sp2", None);
+            printer.resolution_log.push(ResolutionState::Condition(id2, None));
+            printer.resolved_conditions.insert(id2, Some(false));
+
+            assert_eq!(printer.resolved_conditions.get(&id1).unwrap().unwrap(), true);
+            assert_eq!(printer.resolved_conditions.get(&id2).unwrap().unwrap(), false);
+
+            // Rollback to sp2
+            printer.update_state_to_save_point(sp2, false);
+            assert_eq!(printer.resolved_conditions.get(&id1).unwrap().unwrap(), true);
+            assert!(printer.resolved_conditions.get(&id2).is_none());
+
+            // Rollback to sp1
+            printer.update_state_to_save_point(sp1, false);
+            assert!(printer.resolved_conditions.get(&id1).is_none());
+            assert!(printer.resolved_conditions.get(&id2).is_none());
         });
     }
 }
