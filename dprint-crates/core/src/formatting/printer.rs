@@ -27,6 +27,20 @@ pub struct SavePoint<'a> {
   pub look_ahead_line_start_column_number_save_points: BumpHashMap<'a, u32, &'a SavePoint<'a>>,
   pub look_ahead_line_start_indent_level_save_points: BumpHashMap<'a, u32, &'a SavePoint<'a>>,
   pub next_node_stack: NodeStack<'a>,
+  pub resolved_actions_count: u32,
+}
+
+enum ResolvedAction {
+  Condition(u32, Option<Option<bool>>),
+  ForcedCondition(u32, Option<Option<bool>>),
+  StoredConditionSavePoint(u32, Option<(&'static Condition, &'static SavePoint<'static>)>),
+  LineNumberAnchor(u32, Option<u32>),
+  LineNumber(u32, Option<u32>),
+  ColumnNumber(u32, Option<u32>),
+  IsStartOfLine(u32, Option<bool>),
+  IndentLevel(u32, Option<u8>),
+  LineStartColumnNumber(u32, Option<u32>),
+  LineStartIndentLevel(u32, Option<u8>),
 }
 
 #[cfg(feature = "tracing")]
@@ -75,6 +89,8 @@ pub struct Printer<'a> {
   infinite_reevaluation_protector: InfiniteReevaluationProtector,
   next_node_stack: NodeStack<'a>,
   stored_condition_save_points: BumpHashMap<'a, u32, (&'a Condition, &'a SavePoint<'a>)>,
+  resolved_actions: Vec<ResolvedAction>,
+  forced_condition_values: BumpHashMap<'a, u32, Option<bool>>,
   max_width: u32,
   skip_moving_next: bool,
   resolving_save_point: Option<&'a SavePoint<'a>>,
@@ -118,6 +134,8 @@ impl<'a> Printer<'a> {
       infinite_reevaluation_protector: InfiniteReevaluationProtector::with_capacity(thread_state::next_condition_reevaluation_id()),
       stored_condition_save_points: BumpHashMap::with_hasher_in(Default::default(), bump.inner()),
       next_node_stack: NodeStack::default(),
+      resolved_actions: Vec::new(),
+      forced_condition_values: BumpHashMap::with_hasher_in(Default::default(), bump.inner()),
       max_width: options.max_width,
       skip_moving_next: false,
       resolving_save_point: None,
@@ -265,12 +283,36 @@ impl<'a> Printer<'a> {
 
   pub fn clear_info(&mut self, info: Info) {
     match info {
-      Info::LineNumber(info) => self.resolved_line_numbers.remove(info.unique_id()),
-      Info::ColumnNumber(info) => self.resolved_column_numbers.remove(info.unique_id()),
-      Info::IsStartOfLine(info) => self.resolved_is_start_of_lines.remove(info.unique_id()),
-      Info::IndentLevel(info) => self.resolved_indent_levels.remove(info.unique_id()),
-      Info::LineStartColumnNumber(info) => self.resolved_line_start_column_numbers.remove(info.unique_id()),
-      Info::LineStartIndentLevel(info) => self.resolved_line_start_indent_levels.remove(info.unique_id()),
+      Info::LineNumber(info) => {
+        let id = info.unique_id();
+        self.resolved_actions.push(ResolvedAction::LineNumber(id, self.resolved_line_numbers.get(id)));
+        self.resolved_line_numbers.remove(id)
+      },
+      Info::ColumnNumber(info) => {
+        let id = info.unique_id();
+        self.resolved_actions.push(ResolvedAction::ColumnNumber(id, self.resolved_column_numbers.get(id)));
+        self.resolved_column_numbers.remove(id)
+      },
+      Info::IsStartOfLine(info) => {
+        let id = info.unique_id();
+        self.resolved_actions.push(ResolvedAction::IsStartOfLine(id, self.resolved_is_start_of_lines.get(id)));
+        self.resolved_is_start_of_lines.remove(id)
+      },
+      Info::IndentLevel(info) => {
+        let id = info.unique_id();
+        self.resolved_actions.push(ResolvedAction::IndentLevel(id, self.resolved_indent_levels.get(id)));
+        self.resolved_indent_levels.remove(id)
+      },
+      Info::LineStartColumnNumber(info) => {
+        let id = info.unique_id();
+        self.resolved_actions.push(ResolvedAction::LineStartColumnNumber(id, self.resolved_line_start_column_numbers.get(id)));
+        self.resolved_line_start_column_numbers.remove(id)
+      },
+      Info::LineStartIndentLevel(info) => {
+        let id = info.unique_id();
+        self.resolved_actions.push(ResolvedAction::LineStartIndentLevel(id, self.resolved_line_start_indent_levels.get(id)));
+        self.resolved_line_start_indent_levels.remove(id)
+      },
     }
   }
 
@@ -323,6 +365,7 @@ impl<'a> Printer<'a> {
       look_ahead_line_start_column_number_save_points: self.look_ahead_line_start_column_number_save_points.clone(),
       look_ahead_line_start_indent_level_save_points: self.look_ahead_line_start_indent_level_save_points.clone(),
       next_node_stack: self.next_node_stack.clone(),
+      resolved_actions_count: self.resolved_actions.len() as u32,
     })
   }
 
@@ -361,16 +404,89 @@ impl<'a> Printer<'a> {
     self
       .look_ahead_line_number_save_points
       .clone_from(&save_point.look_ahead_line_number_save_points);
-    // ... other look-ahead maps ...
-
-    // BUG: The resolved_* maps (resolved_line_numbers, resolved_conditions, etc.) 
-    // are NOT restored here. This means information resolved during a speculative
-    // pass (the one that just finished and triggered this restoration) will
-    // persist and contaminate the state for the re-print pass. 
-    // If the re-print pass changes the layout (e.g. introduces a newline), 
-    // these persisted values will be WRONG but will never be updated.
+    self.look_ahead_column_number_save_points.clone_from(&save_point.look_ahead_column_number_save_points);
+    self.look_ahead_is_start_of_line_save_points.clone_from(&save_point.look_ahead_is_start_of_line_save_points);
+    self.look_ahead_indent_level_save_points.clone_from(&save_point.look_ahead_indent_level_save_points);
+    self.look_ahead_line_start_column_number_save_points.clone_from(&save_point.look_ahead_line_start_column_number_save_points);
+    self.look_ahead_line_start_indent_level_save_points.clone_from(&save_point.look_ahead_line_start_indent_level_save_points);
 
     self.next_node_stack = save_point.next_node_stack.clone();
+
+    while self.resolved_actions.len() > save_point.resolved_actions_count as usize {
+      let action = self.resolved_actions.pop().unwrap();
+      match action {
+        ResolvedAction::Condition(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_conditions.insert(id, prev);
+          } else {
+            self.resolved_conditions.remove(&id);
+          }
+        }
+        ResolvedAction::ForcedCondition(id, prev) => {
+          if let Some(prev) = prev {
+            self.forced_condition_values.insert(id, prev);
+          } else {
+            self.forced_condition_values.remove(&id);
+          }
+        }
+        ResolvedAction::StoredConditionSavePoint(id, prev) => {
+          if let Some(prev) = prev {
+            self.stored_condition_save_points.insert(id, unsafe { std::mem::transmute(prev) });
+          } else {
+            self.stored_condition_save_points.remove(&id);
+          }
+        }
+        ResolvedAction::LineNumberAnchor(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_line_number_anchors.insert(id, prev);
+          } else {
+            self.resolved_line_number_anchors.remove(id);
+          }
+        }
+        ResolvedAction::LineNumber(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_line_numbers.insert(id, prev);
+          } else {
+            self.resolved_line_numbers.remove(id);
+          }
+        }
+        ResolvedAction::ColumnNumber(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_column_numbers.insert(id, prev);
+          } else {
+            self.resolved_column_numbers.remove(id);
+          }
+        }
+        ResolvedAction::IsStartOfLine(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_is_start_of_lines.insert(id, prev);
+          } else {
+            self.resolved_is_start_of_lines.remove(id);
+          }
+        }
+        ResolvedAction::IndentLevel(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_indent_levels.insert(id, prev);
+          } else {
+            self.resolved_indent_levels.remove(id);
+          }
+        }
+        ResolvedAction::LineStartColumnNumber(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_line_start_column_numbers.insert(id, prev);
+          } else {
+            self.resolved_line_start_column_numbers.remove(id);
+          }
+        }
+        ResolvedAction::LineStartIndentLevel(id, prev) => {
+          if let Some(prev) = prev {
+            self.resolved_line_start_indent_levels.insert(id, prev);
+          } else {
+            self.resolved_line_start_indent_levels.remove(id);
+          }
+        }
+      }
+    }
 
     if is_for_new_line {
       self.write_new_line();
@@ -454,16 +570,19 @@ impl<'a> Printer<'a> {
       Anchor::LineNumber(anchor) => {
         let id = anchor.unique_id();
         let current_line_number = self.writer.line_number();
-        if let Some(past_line_number) = self.resolved_line_number_anchors.get(id) {
+        let past_line_number = self.resolved_line_number_anchors.get(id);
+        if let Some(past_line_number) = past_line_number {
           let difference = (current_line_number as isize) - (past_line_number as isize);
           if difference != 0 {
             let line_number_id = anchor.line_number_id();
             if let Some(value) = self.resolved_line_numbers.get(line_number_id) {
               let new_value = ((value as isize) + difference) as u32;
+              self.resolved_actions.push(ResolvedAction::LineNumber(line_number_id, Some(value)));
               self.resolved_line_numbers.insert(line_number_id, new_value);
             }
           }
         }
+        self.resolved_actions.push(ResolvedAction::LineNumberAnchor(id, past_line_number));
         self.resolved_line_number_anchors.insert(id, current_line_number);
       }
     }
@@ -474,57 +593,81 @@ impl<'a> Printer<'a> {
     match info {
       Info::LineNumber(line_number) => {
         let line_number_id = line_number.unique_id();
+        self.resolved_actions.push(ResolvedAction::LineNumber(line_number_id, self.resolved_line_numbers.get(line_number_id)));
         self.resolved_line_numbers.insert(line_number_id, self.writer.line_number());
         let option_save_point = self.look_ahead_line_number_save_points.remove(&line_number_id);
         if let Some(save_point) = option_save_point {
           if super::is_debug() {
             eprintln!("Restoring for line number {} ({}) - resolved to {}", line_number.name(), line_number_id, self.writer.line_number());
           }
+          let val = self.writer.line_number();
           self.update_state_to_save_point(save_point, false);
+          self.resolved_actions.push(ResolvedAction::LineNumber(line_number_id, self.resolved_line_numbers.get(line_number_id)));
+          self.resolved_line_numbers.insert(line_number_id, val);
         }
       }
       Info::ColumnNumber(column_number) => {
         let column_number_id = column_number.unique_id();
+        self.resolved_actions.push(ResolvedAction::ColumnNumber(column_number_id, self.resolved_column_numbers.get(column_number_id)));
         self.resolved_column_numbers.insert(column_number_id, self.writer.column_number());
         let option_save_point = self.look_ahead_column_number_save_points.remove(&column_number_id);
         if let Some(save_point) = option_save_point {
+          let val = self.writer.column_number();
           self.update_state_to_save_point(save_point, false);
+          self.resolved_actions.push(ResolvedAction::ColumnNumber(column_number_id, self.resolved_column_numbers.get(column_number_id)));
+          self.resolved_column_numbers.insert(column_number_id, val);
         }
       }
       Info::IsStartOfLine(is_start_of_line) => {
         let is_start_of_line_id = is_start_of_line.unique_id();
+        self.resolved_actions.push(ResolvedAction::IsStartOfLine(is_start_of_line_id, self.resolved_is_start_of_lines.get(is_start_of_line_id)));
         self.resolved_is_start_of_lines.insert(is_start_of_line_id, self.writer.is_start_of_line());
         let option_save_point = self.look_ahead_is_start_of_line_save_points.remove(&is_start_of_line_id);
         if let Some(save_point) = option_save_point {
+          let val = self.writer.is_start_of_line();
           self.update_state_to_save_point(save_point, false);
+          self.resolved_actions.push(ResolvedAction::IsStartOfLine(is_start_of_line_id, self.resolved_is_start_of_lines.get(is_start_of_line_id)));
+          self.resolved_is_start_of_lines.insert(is_start_of_line_id, val);
         }
       }
       Info::IndentLevel(indent_level) => {
         let indent_level_id = indent_level.unique_id();
+        self.resolved_actions.push(ResolvedAction::IndentLevel(indent_level_id, self.resolved_indent_levels.get(indent_level_id)));
         self.resolved_indent_levels.insert(indent_level_id, self.writer.indent_level());
         let option_save_point = self.look_ahead_indent_level_save_points.remove(&indent_level_id);
         if let Some(save_point) = option_save_point {
+          let val = self.writer.indent_level();
           self.update_state_to_save_point(save_point, false);
+          self.resolved_actions.push(ResolvedAction::IndentLevel(indent_level_id, self.resolved_indent_levels.get(indent_level_id)));
+          self.resolved_indent_levels.insert(indent_level_id, val);
         }
       }
       Info::LineStartColumnNumber(line_start_column_number) => {
         let line_start_column_number_id = line_start_column_number.unique_id();
+        self.resolved_actions.push(ResolvedAction::LineStartColumnNumber(line_start_column_number_id, self.resolved_line_start_column_numbers.get(line_start_column_number_id)));
         self
           .resolved_line_start_column_numbers
           .insert(line_start_column_number_id, self.writer.line_start_column_number());
         let option_save_point = self.look_ahead_line_start_column_number_save_points.remove(&line_start_column_number_id);
         if let Some(save_point) = option_save_point {
+          let val = self.writer.line_start_column_number();
           self.update_state_to_save_point(save_point, false);
+          self.resolved_actions.push(ResolvedAction::LineStartColumnNumber(line_start_column_number_id, self.resolved_line_start_column_numbers.get(line_start_column_number_id)));
+          self.resolved_line_start_column_numbers.insert(line_start_column_number_id, val);
         }
       }
       Info::LineStartIndentLevel(line_start_indent_level) => {
         let line_start_indent_level_id = line_start_indent_level.unique_id();
+        self.resolved_actions.push(ResolvedAction::LineStartIndentLevel(line_start_indent_level_id, self.resolved_line_start_indent_levels.get(line_start_indent_level_id)));
         self
           .resolved_line_start_indent_levels
           .insert(line_start_indent_level_id, self.writer.line_start_indent_level());
         let option_save_point = self.look_ahead_line_start_indent_level_save_points.remove(&line_start_indent_level_id);
         if let Some(save_point) = option_save_point {
+          let val = self.writer.line_start_indent_level();
           self.update_state_to_save_point(save_point, false);
+          self.resolved_actions.push(ResolvedAction::LineStartIndentLevel(line_start_indent_level_id, self.resolved_line_start_indent_levels.get(line_start_indent_level_id)));
+          self.resolved_line_start_indent_levels.insert(line_start_indent_level_id, val);
         }
       }
     }
@@ -551,8 +694,13 @@ impl<'a> Printer<'a> {
         if let Some(latest_condition_value) = latest_condition_value {
           if latest_condition_value != past_condition_value {
             self.update_state_to_save_point(save_point, false);
+            self.resolved_actions.push(ResolvedAction::ForcedCondition(condition_id, self.forced_condition_values.get(&condition_id).copied()));
+            self.forced_condition_values.insert(condition_id, Some(latest_condition_value));
           }
         } else {
+          self.resolved_actions.push(ResolvedAction::ForcedCondition(condition_id, self.forced_condition_values.get(&condition_id).copied()));
+          self.forced_condition_values.insert(condition_id, None);
+          self.resolved_actions.push(ResolvedAction::Condition(condition_id, self.resolved_conditions.get(&condition_id).copied()));
           self.resolved_conditions.remove(&condition_id);
         }
       }
@@ -565,17 +713,26 @@ impl<'a> Printer<'a> {
     let condition_name = condition.name();
 
     if condition.store_save_point {
-      let save_point = self.get_save_point_for_restoring_condition(condition.name());
-      self.stored_condition_save_points.insert(condition.unique_id(), (condition, save_point));
+      if !self.stored_condition_save_points.contains_key(&condition.unique_id()) {
+        let save_point = self.get_save_point_for_restoring_condition(condition.name());
+        let prev = self.stored_condition_save_points.get(&condition.unique_id()).copied();
+        self.resolved_actions.push(ResolvedAction::StoredConditionSavePoint(condition.unique_id(), unsafe { std::mem::transmute(prev) }));
+        self.stored_condition_save_points.insert(condition.unique_id(), (condition, save_point));
+      }
     }
 
-    let condition_value = condition.resolve(&mut ConditionResolverContext::new(self, self.get_writer_info()));
+    let condition_value = if let Some(val) = self.forced_condition_values.get(&condition_id) {
+      *val
+    } else {
+      condition.resolve(&mut ConditionResolverContext::new(self, self.get_writer_info()))
+    };
     
     if !condition_name.is_empty() && super::is_debug() {
         eprintln!("Condition {} ({}): {:?}", condition_name, condition_id, condition_value);
     }
 
     if condition.is_stored {
+      self.resolved_actions.push(ResolvedAction::Condition(condition_id, self.resolved_conditions.get(&condition_id).copied()));
       self.resolved_conditions.insert(condition_id, condition_value);
     }
 
