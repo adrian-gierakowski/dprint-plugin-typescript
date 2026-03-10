@@ -18,6 +18,8 @@ mod writer;
 pub mod tokens;
 pub mod utils;
 
+pub use utils::is_debug;
+
 pub use print::PrintOptions;
 #[cfg(feature = "tracing")]
 pub use print::TracingResult;

@@ -7,7 +7,7 @@ pub fn is_multiple_lines(condition_context: &mut ConditionResolverContext, start
   let start_ln_val = condition_context.resolved_line_number(start_ln)?;
   let end_ln_val = condition_context.resolved_line_number(end_ln)?;
 
-  if end_ln_val > start_ln_val {
+  if end_ln_val > start_ln_val && super::is_debug() {
     eprintln!("is_multiple_lines {} vs {}: true", start_ln_val, end_ln_val);
   }
 

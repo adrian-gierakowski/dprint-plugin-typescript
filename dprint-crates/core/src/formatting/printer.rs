@@ -192,7 +192,9 @@ impl<'a> Printer<'a> {
     let resolved_number = self.resolved_line_numbers.get(line_number.unique_id());
     if resolved_number.is_none() && !self.look_ahead_line_number_save_points.contains_key(&line_number.unique_id()) {
       let save_point = self.get_save_point_for_restoring_condition(line_number.name());
-      eprintln!("Creating look-ahead save point for line number {} ({}) at line {}, col {}", line_number.name(), line_number.unique_id(), self.writer.line_number(), self.writer.column_number());
+      if super::is_debug() {
+        eprintln!("Creating look-ahead save point for line number {} ({}) at line {}, col {}", line_number.name(), line_number.unique_id(), self.writer.line_number(), self.writer.column_number());
+      }
       self.look_ahead_line_number_save_points.insert(line_number.unique_id(), save_point);
     }
 
@@ -382,7 +384,9 @@ impl<'a> Printer<'a> {
     match signal {
       Signal::NewLine => {
         if self.allow_new_lines() {
-          eprintln!("Signal::NewLine at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+          if super::is_debug() {
+            eprintln!("Signal::NewLine at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+          }
           self.write_new_line()
         }
       }
@@ -394,7 +398,9 @@ impl<'a> Printer<'a> {
       }
       Signal::PossibleNewLine => {
         if self.allow_new_lines() {
-          eprintln!("Signal::PossibleNewLine at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+          if super::is_debug() {
+            eprintln!("Signal::PossibleNewLine at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+          }
           self.mark_possible_new_line_if_able()
         }
       }
@@ -403,14 +409,20 @@ impl<'a> Printer<'a> {
           if self.is_above_max_width(1) {
             let optional_save_state = self.possible_new_line_save_point.take();
             if optional_save_state.is_none() {
-              eprintln!("Breaking for width at Signal::SpaceOrNewLine (no save point) at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+              if super::is_debug() {
+                eprintln!("Breaking for width at Signal::SpaceOrNewLine (no save point) at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+              }
               self.write_new_line();
             } else if let Some(save_state) = optional_save_state {
               if save_state.new_line_group_depth >= self.new_line_group_depth {
-                eprintln!("Breaking for width at Signal::SpaceOrNewLine (using same level save point) at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+                if super::is_debug() {
+                  eprintln!("Breaking for width at Signal::SpaceOrNewLine (using same level save point) at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+                }
                 self.write_new_line();
               } else {
-                eprintln!("Restoring for width at Signal::SpaceOrNewLine at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+                if super::is_debug() {
+                  eprintln!("Restoring for width at Signal::SpaceOrNewLine at line {}, col {}", self.writer.line_number(), self.writer.column_number());
+                }
                 self.update_state_to_save_point(save_state, true);
               }
             }
@@ -465,7 +477,9 @@ impl<'a> Printer<'a> {
         self.resolved_line_numbers.insert(line_number_id, self.writer.line_number());
         let option_save_point = self.look_ahead_line_number_save_points.remove(&line_number_id);
         if let Some(save_point) = option_save_point {
-          eprintln!("Restoring for line number {} ({}) - resolved to {}", line_number.name(), line_number_id, self.writer.line_number());
+          if super::is_debug() {
+            eprintln!("Restoring for line number {} ({}) - resolved to {}", line_number.name(), line_number_id, self.writer.line_number());
+          }
           self.update_state_to_save_point(save_point, false);
         }
       }
@@ -557,7 +571,7 @@ impl<'a> Printer<'a> {
 
     let condition_value = condition.resolve(&mut ConditionResolverContext::new(self, self.get_writer_info()));
     
-    if !condition_name.is_empty() {
+    if !condition_name.is_empty() && super::is_debug() {
         eprintln!("Condition {} ({}): {:?}", condition_name, condition_id, condition_value);
     }
 
@@ -568,7 +582,9 @@ impl<'a> Printer<'a> {
     let save_point = self.look_ahead_condition_save_points.get(&condition_id);
     if condition_value.is_some() && save_point.is_some() {
       let save_point = self.look_ahead_condition_save_points.remove(&condition_id);
-      eprintln!("Restoring for condition {} ({})", condition_name, condition_id);
+      if super::is_debug() {
+        eprintln!("Restoring for condition {} ({})", condition_name, condition_id);
+      }
       self.update_state_to_save_point(save_point.unwrap(), false);
       return;
     }
@@ -606,7 +622,9 @@ impl<'a> Printer<'a> {
 
     if self.possible_new_line_save_point.is_some() && self.is_above_max_width(text.char_count) && self.allow_new_lines() {
       let save_point = self.possible_new_line_save_point.take();
-      eprintln!("Restoring for width at handle_string ('{}') at line {}, col {}", text.text, self.writer.line_number(), self.writer.column_number());
+      if super::is_debug() {
+        eprintln!("Restoring for width at handle_string ('{}') at line {}, col {}", text.text, self.writer.line_number(), self.writer.column_number());
+      }
       self.update_state_to_save_point(save_point.unwrap(), true);
     } else {
       self.writer.write(text);
