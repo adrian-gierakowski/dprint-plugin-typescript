@@ -10,10 +10,13 @@ const k = () => function() {
 [expect]
 const k = () =>
   function() {
-    f(aaaaaaaaaaaaaaaaaaa, bbbbbbbbb =>
-      aa
-        .b
-        .c);
+    f(
+      aaaaaaaaaaaaaaaaaaa,
+      bbbbbbbbb =>
+        aa
+          .b
+          .c,
+    );
     Set.add(Entity.make(x));
     Set.add(Entity.make(x));
   };
@@ -29,11 +32,13 @@ const g = () => function() {
 [expect]
 const g = () =>
   function() {
-    f(aaaaaaaaaaaaaaaaaaa, bbbbbbbbb =>
-      aaa
-        .b
-        .c);
+    f(
+      aaaaaaaaaaaaaaaaaaa,
+      bbbbbbbbb =>
+        aaa
+          .b
+          .c,
+    );
     Set.add(Entity.make(x));
     Set.add(Entity.make(x));
   };
-
