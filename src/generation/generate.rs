@@ -8388,6 +8388,11 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
       } else if !context.config.member_expression_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
       } else {
+        // This condition uses look-ahead to determine if the entire member expression (up to the last item) 
+        // spans multiple lines. If so, it forces a newline for every dot in the chain.
+        // BUG: If multiple dots look ahead to the same `member_expr_last_item_start_ln`, 
+        // the `dprint-core` state leak (non-restoration of resolved maps) causes 
+        // incorrect formatting if a restoration changes the layout.
         items.push_condition(if_true_or(
           "isMultipleLines",
           Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),

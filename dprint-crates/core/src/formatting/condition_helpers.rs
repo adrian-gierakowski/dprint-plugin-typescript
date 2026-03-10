@@ -4,10 +4,14 @@ use super::LineNumber;
 use super::LineStartIndentLevel;
 
 pub fn is_multiple_lines(condition_context: &mut ConditionResolverContext, start_ln: LineNumber, end_ln: LineNumber) -> Option<bool> {
-  let start_ln = condition_context.resolved_line_number(start_ln)?;
-  let end_ln = condition_context.resolved_line_number(end_ln)?;
+  let start_ln_val = condition_context.resolved_line_number(start_ln)?;
+  let end_ln_val = condition_context.resolved_line_number(end_ln)?;
 
-  Some(end_ln > start_ln)
+  if end_ln_val > start_ln_val {
+    eprintln!("is_multiple_lines {} vs {}: true", start_ln_val, end_ln_val);
+  }
+
+  Some(end_ln_val > start_ln_val)
 }
 
 pub fn is_hanging(condition_context: &mut ConditionResolverContext, start_lsil: LineStartIndentLevel, end_lsil: Option<LineStartIndentLevel>) -> Option<bool> {
