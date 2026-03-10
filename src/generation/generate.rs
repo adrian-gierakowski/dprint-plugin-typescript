@@ -8383,10 +8383,19 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
         items.push_signal(Signal::NewLine);
       } else if !should_use_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
-      } else if should_force_multi_line {
-        items.push_signal(Signal::NewLine);
+      } else if context.parent().kind() == NodeKind::JSXExprContainer {
+        if should_force_multi_line {
+          items.push_signal(Signal::NewLine);
+        } else {
+          items.push_signal(Signal::PossibleNewLine);
+        }
       } else {
-        items.push_signal(Signal::PossibleNewLine);
+        items.push_condition(if_true_or(
+          "isMultipleLines",
+          Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
+          Signal::NewLine.into(),
+          Signal::PossibleNewLine.into(),
+        ));
       }
     }
 
