@@ -8798,6 +8798,9 @@ fn gen_conditional_brace_body<'a>(opts: GenConditionalBraceBodyOptions<'a>, cont
   items.push_line_and_column(start_lc);
   items.push_anchor(LineNumberAnchor::new(end_ln));
   items.push_condition(open_brace_condition);
+  if !is_body_empty_stmt {
+    items.push_signal(Signal::PossibleNewLine);
+  }
   items.push_line_and_column(start_inner_text_lc);
   let generated_comments = gen_comment_collection(header_trailing_comments.into_iter(), None, None, context);
   if !generated_comments.is_empty() {

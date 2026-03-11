@@ -28,12 +28,14 @@ pub struct SavePoint<'a> {
   pub look_ahead_line_start_indent_level_save_points: BumpHashMap<'a, u32, &'a SavePoint<'a>>,
   pub next_node_stack: NodeStack<'a>,
   pub resolved_actions_count: u32,
+  pub resolving_save_point: Option<&'a SavePoint<'a>>,
 }
 
+#[derive(Debug)]
 enum ResolvedAction {
   Condition(u32, Option<Option<bool>>),
   ForcedCondition(u32, Option<Option<bool>>),
-  StoredConditionSavePoint(u32, Option<(&'static Condition, &'static SavePoint<'static>)>),
+  StoredConditionSavePoint(u32, Option<(usize, usize)>),
   LineNumberAnchor(u32, Option<u32>),
   LineNumber(u32, Option<u32>),
   ColumnNumber(u32, Option<u32>),
@@ -366,6 +368,7 @@ impl<'a> Printer<'a> {
       look_ahead_line_start_indent_level_save_points: self.look_ahead_line_start_indent_level_save_points.clone(),
       next_node_stack: self.next_node_stack.clone(),
       resolved_actions_count: self.resolved_actions.len() as u32,
+      resolving_save_point: self.resolving_save_point,
     })
   }
 
@@ -411,9 +414,13 @@ impl<'a> Printer<'a> {
     self.look_ahead_line_start_indent_level_save_points.clone_from(&save_point.look_ahead_line_start_indent_level_save_points);
 
     self.next_node_stack = save_point.next_node_stack.clone();
+    self.resolving_save_point = save_point.resolving_save_point;
 
     while self.resolved_actions.len() > save_point.resolved_actions_count as usize {
       let action = self.resolved_actions.pop().unwrap();
+      if super::is_debug() {
+        eprintln!("Undoing action: {:?}", action);
+      }
       match action {
         ResolvedAction::Condition(id, prev) => {
           if let Some(prev) = prev {
@@ -430,8 +437,8 @@ impl<'a> Printer<'a> {
           }
         }
         ResolvedAction::StoredConditionSavePoint(id, prev) => {
-          if let Some(prev) = prev {
-            self.stored_condition_save_points.insert(id, unsafe { std::mem::transmute(prev) });
+          if let Some((condition, save_point)) = prev {
+            self.stored_condition_save_points.insert(id, (unsafe { &*(condition as *const Condition) }, unsafe { &*(save_point as *const SavePoint) }));
           } else {
             self.stored_condition_save_points.remove(&id);
           }
@@ -715,8 +722,8 @@ impl<'a> Printer<'a> {
     if condition.store_save_point {
       if !self.stored_condition_save_points.contains_key(&condition.unique_id()) {
         let save_point = self.get_save_point_for_restoring_condition(condition.name());
-        let prev = self.stored_condition_save_points.get(&condition.unique_id()).copied();
-        self.resolved_actions.push(ResolvedAction::StoredConditionSavePoint(condition.unique_id(), unsafe { std::mem::transmute(prev) }));
+        let prev = self.stored_condition_save_points.get(&condition.unique_id()).map(|(c, s)| (*c as *const Condition as usize, *s as *const SavePoint as usize));
+        self.resolved_actions.push(ResolvedAction::StoredConditionSavePoint(condition.unique_id(), prev));
         self.stored_condition_save_points.insert(condition.unique_id(), (condition, save_point));
       }
     }
