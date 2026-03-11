@@ -1,20 +1,8 @@
-~~ lineWidth: 120, arguments.preferHanging: always ~~
+~~ lineWidth: 30, arguments.preferHanging: always ~~
 == should format ==
-namespace test.something {
-    function test() {
-        if (true) {
-            testingthisout(testingThis, testingThisOutt.abittt.test === TestingThi.SOutALittleBitttt ? testingThisOudt.morrre : testingThisEeee);
-        }
-    }
-}
+f(a, bbb === ccc ? ddddddd : eeeeeee);
 
 [expect]
-namespace test.something {
-    function test() {
-        if (true) {
-            testingthisout(testingThis, testingThisOutt.abittt.test === TestingThi.SOutALittleBitttt
-                ? testingThisOudt.morrre
-                : testingThisEeee);
-        }
-    }
-}
+f(a, bbb === ccc
+    ? ddddddd
+    : eeeeeee);
