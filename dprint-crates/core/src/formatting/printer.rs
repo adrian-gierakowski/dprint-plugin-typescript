@@ -749,7 +749,12 @@ impl<'a> Printer<'a> {
       if super::is_debug() {
         eprintln!("Restoring for condition {} ({})", condition_name, condition_id);
       }
+      let val = condition_value;
       self.update_state_to_save_point(save_point.unwrap(), false);
+      if condition.is_stored {
+        self.resolved_actions.push(ResolvedAction::Condition(condition_id, self.resolved_conditions.get(&condition_id).copied()));
+        self.resolved_conditions.insert(condition_id, val);
+      }
       return;
     }
 
