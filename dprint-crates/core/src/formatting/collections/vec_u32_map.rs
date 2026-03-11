@@ -66,9 +66,6 @@ impl VecU32BoolMap {
     let byte_index = key as usize / 4;
 
     if byte_index >= self.0.len() {
-      if cfg!(debug_assertions) {
-        panic!("DEBUG PANIC: A VecU32BoolMap should ideally never be resized. Make sure you give it the correct capacity.");
-      }
       self.0.resize(byte_index + 1, 0);
     }
 
@@ -165,9 +162,6 @@ impl<T: Clone> VecU32MapWithDefault<T> {
   pub fn set(&mut self, key: u32, value: T) {
     let key = key as usize;
     if key >= self.vec.len() {
-      if cfg!(debug_assertions) {
-        panic!("DEBUG PANIC: A VecU32Map should ideally never be resized. Make sure you give it the correct capacity.");
-      }
       self.vec.resize(key + 1, self.default.clone());
     }
     self.vec[key] = value;

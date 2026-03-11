@@ -116,13 +116,13 @@ impl<'a> Printer<'a> {
         },
       ),
       resolved_conditions: BumpHashMap::with_hasher_in(Default::default(), bump.inner()),
-      resolved_line_number_anchors: VecU32U32Map::with_capacity(thread_state::next_line_number_anchor_id()),
-      resolved_line_numbers: VecU32U32Map::with_capacity(thread_state::next_line_number_id()),
-      resolved_column_numbers: VecU32U32Map::with_capacity(thread_state::next_column_number_id()),
-      resolved_is_start_of_lines: VecU32BoolMap::with_capacity(thread_state::next_is_start_of_line_id()),
-      resolved_indent_levels: VecU32U8Map::with_capacity(thread_state::next_indent_level_id()),
-      resolved_line_start_column_numbers: VecU32U32Map::with_capacity(thread_state::next_line_start_column_number_id()),
-      resolved_line_start_indent_levels: VecU32U8Map::with_capacity(thread_state::next_line_start_indent_level_id()),
+      resolved_line_number_anchors: VecU32U32Map::with_capacity(thread_state::next_line_number_anchor_id() + 100),
+      resolved_line_numbers: VecU32U32Map::with_capacity(thread_state::next_line_number_id() + 100),
+      resolved_column_numbers: VecU32U32Map::with_capacity(thread_state::next_column_number_id() + 100),
+      resolved_is_start_of_lines: VecU32BoolMap::with_capacity(thread_state::next_is_start_of_line_id() + 100),
+      resolved_indent_levels: VecU32U8Map::with_capacity(thread_state::next_indent_level_id() + 100),
+      resolved_line_start_column_numbers: VecU32U32Map::with_capacity(thread_state::next_line_start_column_number_id() + 100),
+      resolved_line_start_indent_levels: VecU32U8Map::with_capacity(thread_state::next_line_start_indent_level_id() + 100),
       look_ahead_condition_save_points: BumpHashMap::with_hasher_in(Default::default(), bump.inner()),
       look_ahead_line_number_save_points: BumpHashMap::with_hasher_in(Default::default(), bump.inner()),
       look_ahead_column_number_save_points: BumpHashMap::with_hasher_in(Default::default(), bump.inner()),
@@ -393,6 +393,10 @@ impl<'a> Printer<'a> {
     self.writer.set_state(save_point.writer_state.clone());
     self.possible_new_line_save_point = if is_for_new_line { None } else { save_point.possible_new_line_save_point };
 
+    // NOTE (Bug Investigation): This is the key fix. We must roll back the resolution caches
+    // whenever we restore a SavePoint (e.g. after a look-ahead or a line-wrap restoration).
+    // Without this, resolutions made during a discarded tentative formatting branch
+    // would persist and pollute the cache for subsequent real formatting passes.
     while self.resolution_log.len() > save_point.resolutions_len {
       match self.resolution_log.pop().unwrap() {
         ResolutionState::Condition(id, prev) => {
@@ -580,7 +584,10 @@ impl<'a> Printer<'a> {
         let option_save_point = self.look_ahead_line_number_save_points.remove(&line_number_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
-          // Re-apply
+          self.look_ahead_line_number_save_points.remove(&line_number_id);
+          // NOTE (Bug Investigation): After rolling back from a look-ahead, we MUST re-apply
+          // the resolved value to the cache. This ensures the printer knows the result
+          // of the look-ahead and doesn't immediately re-trigger the same look-ahead.
           self.resolution_log.push(ResolutionState::LineNumber(line_number_id, self.resolved_line_numbers.get(line_number_id)));
           self.resolved_line_numbers.insert(line_number_id, value);
         }
@@ -593,7 +600,8 @@ impl<'a> Printer<'a> {
         let option_save_point = self.look_ahead_column_number_save_points.remove(&column_number_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
-          // Re-apply
+          self.look_ahead_column_number_save_points.remove(&column_number_id);
+          // NOTE (Bug Investigation): Re-apply for all info types to prevent redundant look-aheads.
           self.resolution_log.push(ResolutionState::ColumnNumber(column_number_id, self.resolved_column_numbers.get(column_number_id)));
           self.resolved_column_numbers.insert(column_number_id, value);
         }
@@ -606,7 +614,7 @@ impl<'a> Printer<'a> {
         let option_save_point = self.look_ahead_is_start_of_line_save_points.remove(&is_start_of_line_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
-          // Re-apply
+          self.look_ahead_is_start_of_line_save_points.remove(&is_start_of_line_id);
           self.resolution_log.push(ResolutionState::IsStartOfLine(is_start_of_line_id, self.resolved_is_start_of_lines.get(is_start_of_line_id)));
           self.resolved_is_start_of_lines.insert(is_start_of_line_id, value);
         }
@@ -619,7 +627,7 @@ impl<'a> Printer<'a> {
         let option_save_point = self.look_ahead_indent_level_save_points.remove(&indent_level_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
-          // Re-apply
+          self.look_ahead_indent_level_save_points.remove(&indent_level_id);
           self.resolution_log.push(ResolutionState::IndentLevel(indent_level_id, self.resolved_indent_levels.get(indent_level_id)));
           self.resolved_indent_levels.insert(indent_level_id, value);
         }
@@ -632,7 +640,7 @@ impl<'a> Printer<'a> {
         let option_save_point = self.look_ahead_line_start_column_number_save_points.remove(&line_start_column_number_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
-          // Re-apply
+          self.look_ahead_line_start_column_number_save_points.remove(&line_start_column_number_id);
           self.resolution_log.push(ResolutionState::LineStartColumnNumber(line_start_column_number_id, self.resolved_line_start_column_numbers.get(line_start_column_number_id)));
           self.resolved_line_start_column_numbers.insert(line_start_column_number_id, value);
         }
@@ -645,7 +653,7 @@ impl<'a> Printer<'a> {
         let option_save_point = self.look_ahead_line_start_indent_level_save_points.remove(&line_start_indent_level_id);
         if let Some(save_point) = option_save_point {
           self.update_state_to_save_point(save_point, false);
-          // Re-apply
+          self.look_ahead_line_start_indent_level_save_points.remove(&line_start_indent_level_id);
           self.resolution_log.push(ResolutionState::LineStartIndentLevel(line_start_indent_level_id, self.resolved_line_start_indent_levels.get(line_start_indent_level_id)));
           self.resolved_line_start_indent_levels.insert(line_start_indent_level_id, value);
         }
@@ -674,6 +682,9 @@ impl<'a> Printer<'a> {
         if let Some(latest_condition_value) = latest_condition_value {
           if latest_condition_value != past_condition_value {
             self.update_state_to_save_point(save_point, false);
+            // NOTE (Bug Investigation): Re-apply the value after rollback to break oscillation/infinite loops.
+            self.resolution_log.push(ResolutionState::Condition(condition_id, self.resolved_conditions.get(&condition_id).cloned()));
+            self.resolved_conditions.insert(condition_id, Some(latest_condition_value));
           }
         } else {
           self.resolution_log.push(ResolutionState::Condition(condition_id, self.resolved_conditions.get(&condition_id).cloned()));
@@ -702,7 +713,10 @@ impl<'a> Printer<'a> {
     if let Some(value) = condition_value {
       if let Some(save_point) = self.look_ahead_condition_save_points.remove(&condition_id) {
         self.update_state_to_save_point(save_point, false);
-        // Re-apply
+        // NOTE (Bug Investigation): After rolling back from a look-ahead, we MUST re-apply
+        // the resolved value to the cache. This ensures the printer knows the result
+        // of the look-ahead and doesn't immediately re-trigger the same look-ahead
+        // (which would cause an infinite loop).
         self.resolution_log.push(ResolutionState::Condition(condition_id, self.resolved_conditions.get(&condition_id).cloned()));
         self.resolved_conditions.insert(condition_id, Some(value));
         return;
