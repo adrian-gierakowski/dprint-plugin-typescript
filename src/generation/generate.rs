@@ -2002,6 +2002,7 @@ fn gen_await_expr<'a>(node: &AwaitExpr<'a>, context: &mut Context<'a>) -> PrintI
   items
 }
 
+// 3. Generating binary expression. These often trigger look-aheads.
 fn gen_binary_expr<'a>(node: &BinExpr<'a>, context: &mut Context<'a>) -> PrintItems {
   let mut items = PrintItems::new();
   let flattened_binary_expr = get_flattened_bin_expr(node, context);
@@ -2347,6 +2348,7 @@ fn gen_class_expr<'a>(node: &ClassExpr<'a>, context: &mut Context<'a>) -> PrintI
   )
 }
 
+// 4. Generating ternary expression. These also trigger look-aheads and often contain nested PossibleNewLine signals.
 fn gen_conditional_expr<'a>(node: &CondExpr<'a>, context: &mut Context<'a>) -> PrintItems {
   let question_token = context.token_finder.get_first_operator_after(&node.test, "?").unwrap();
   let colon_token = context.token_finder.get_first_operator_after(&node.cons, ":").unwrap();
@@ -9416,6 +9418,7 @@ fn gen_assignment_op_to<'a>(expr: Node<'a>, _op: &'static str, op_to: &'static S
   gen_assignment_like_with_token(expr, op_to, op_token, context)
 }
 
+// 1. Entering assignment generation. A PossibleNewLine is pushed if the header is long.
 fn gen_assignment_like_with_token<'a>(expr: Node<'a>, op: &'static StringContainer, op_token: Option<&TokenAndSpan>, context: &mut Context<'a>) -> PrintItems {
   let use_new_line_group = get_use_new_line_group(expr);
   let mut items = PrintItems::new();
@@ -9435,6 +9438,7 @@ fn gen_assignment_like_with_token<'a>(expr: Node<'a>, op: &'static StringContain
   let generated_assignment = {
     let mut items = PrintItems::new();
     if !had_op_trailing_comments {
+      // 2. This condition decides whether to push a PossibleNewLine after '='.
       items.push_condition(conditions::if_above_width_or(
         context.config.indent_width,
         {
@@ -9446,6 +9450,7 @@ fn gen_assignment_like_with_token<'a>(expr: Node<'a>, op: &'static StringContain
         Signal::SpaceIfNotTrailing.into(),
       ));
     }
+    // 3. Generate the expression (the RHS of the assignment).
     let assignment = gen_node(expr, context);
     let assignment = if had_op_trailing_comments {
       assignment

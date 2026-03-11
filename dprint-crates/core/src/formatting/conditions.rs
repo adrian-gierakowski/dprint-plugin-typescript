@@ -103,7 +103,11 @@ pub fn if_above_width_or(width: u8, true_items: PrintItems, false_items: PrintIt
       condition: Rc::new(move |context| {
         let writer_info = &context.writer_info;
         let first_indent_col = writer_info.line_start_column_number() + (width as u32);
-        Some(writer_info.column_number > first_indent_col)
+        let result = writer_info.column_number > first_indent_col;
+        if super::is_debug() {
+          eprintln!("if_above_width: col: {}, start_col: {}, width: {}, first_indent_col: {} -> {}", writer_info.column_number, writer_info.line_start_column_number(), width, first_indent_col, result);
+        }
+        Some(result)
       }),
       true_path: Some(true_items),
       false_path: if false_items.is_empty() { None } else { Some(false_items) },

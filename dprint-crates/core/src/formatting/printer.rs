@@ -351,6 +351,9 @@ impl<'a> Printer<'a> {
   }
 
   fn create_save_point(&self, _name: &'static str, next_node: Option<PrintItemPath>) -> &'a SavePoint<'a> {
+    if super::is_debug() {
+      eprintln!("Creating save point: {} at line {}, col {}", _name, self.writer.line_number(), self.writer.column_number());
+    }
     self.bump.alloc_save_point(SavePoint {
       #[cfg(debug_assertions)]
       name: _name,
@@ -394,10 +397,18 @@ impl<'a> Printer<'a> {
 
   #[inline]
   fn is_above_max_width(&self, offset: u32) -> bool {
-    self.writer.column_number() + offset > self.max_width
+    let result = self.writer.column_number() + offset > self.max_width;
+    if super::is_debug() {
+      eprintln!("is_above_max_width: col: {}, offset: {}, max: {} -> {}", self.writer.column_number(), offset, self.max_width, result);
+    }
+    result
   }
 
+  // 8. update_state_to_save_point: restoring state. If is_for_new_line is true, we write a newline.
   fn update_state_to_save_point(&mut self, save_point: &'a SavePoint<'a>, is_for_new_line: bool) {
+    if super::is_debug() {
+      eprintln!("Restoring save point: {} at line {}, col {} (is_for_new_line: {})", save_point.name, self.writer.line_number(), self.writer.column_number(), is_for_new_line);
+    }
     self.writer.set_state(save_point.writer_state.clone());
     self.possible_new_line_save_point = if is_for_new_line { None } else { save_point.possible_new_line_save_point };
     self.current_node = save_point.node;
@@ -596,6 +607,7 @@ impl<'a> Printer<'a> {
   }
 
   #[inline]
+  // 6. Handle a targeted info. If it was already requested by a condition, it will restore to the save point.
   fn handle_targeted_info(&mut self, info: &Info) {
     match info {
       Info::LineNumber(line_number) => {
@@ -619,6 +631,9 @@ impl<'a> Printer<'a> {
         self.resolved_column_numbers.insert(column_number_id, self.writer.column_number());
         let option_save_point = self.look_ahead_column_number_save_points.remove(&column_number_id);
         if let Some(save_point) = option_save_point {
+          if super::is_debug() {
+            eprintln!("Restoring for column number {} ({}) - resolved to {}", column_number.name(), column_number_id, self.writer.column_number());
+          }
           let val = self.writer.column_number();
           self.update_state_to_save_point(save_point, false);
           self.resolved_actions.push(ResolvedAction::ColumnNumber(column_number_id, self.resolved_column_numbers.get(column_number_id)));
@@ -631,6 +646,9 @@ impl<'a> Printer<'a> {
         self.resolved_is_start_of_lines.insert(is_start_of_line_id, self.writer.is_start_of_line());
         let option_save_point = self.look_ahead_is_start_of_line_save_points.remove(&is_start_of_line_id);
         if let Some(save_point) = option_save_point {
+          if super::is_debug() {
+            eprintln!("Restoring for is start of line {} ({}) - resolved to {}", is_start_of_line.name(), is_start_of_line_id, self.writer.is_start_of_line());
+          }
           let val = self.writer.is_start_of_line();
           self.update_state_to_save_point(save_point, false);
           self.resolved_actions.push(ResolvedAction::IsStartOfLine(is_start_of_line_id, self.resolved_is_start_of_lines.get(is_start_of_line_id)));
@@ -643,6 +661,9 @@ impl<'a> Printer<'a> {
         self.resolved_indent_levels.insert(indent_level_id, self.writer.indent_level());
         let option_save_point = self.look_ahead_indent_level_save_points.remove(&indent_level_id);
         if let Some(save_point) = option_save_point {
+          if super::is_debug() {
+            eprintln!("Restoring for indent level {} ({}) - resolved to {}", indent_level.name(), indent_level_id, self.writer.indent_level());
+          }
           let val = self.writer.indent_level();
           self.update_state_to_save_point(save_point, false);
           self.resolved_actions.push(ResolvedAction::IndentLevel(indent_level_id, self.resolved_indent_levels.get(indent_level_id)));
@@ -657,6 +678,14 @@ impl<'a> Printer<'a> {
           .insert(line_start_column_number_id, self.writer.line_start_column_number());
         let option_save_point = self.look_ahead_line_start_column_number_save_points.remove(&line_start_column_number_id);
         if let Some(save_point) = option_save_point {
+          if super::is_debug() {
+            eprintln!(
+              "Restoring for line start column number {} ({}) - resolved to {}",
+              line_start_column_number.name(),
+              line_start_column_number_id,
+              self.writer.line_start_column_number()
+            );
+          }
           let val = self.writer.line_start_column_number();
           self.update_state_to_save_point(save_point, false);
           self.resolved_actions.push(ResolvedAction::LineStartColumnNumber(line_start_column_number_id, self.resolved_line_start_column_numbers.get(line_start_column_number_id)));
@@ -671,6 +700,14 @@ impl<'a> Printer<'a> {
           .insert(line_start_indent_level_id, self.writer.line_start_indent_level());
         let option_save_point = self.look_ahead_line_start_indent_level_save_points.remove(&line_start_indent_level_id);
         if let Some(save_point) = option_save_point {
+          if super::is_debug() {
+            eprintln!(
+              "Restoring for line start indent level {} ({}) - resolved to {}",
+              line_start_indent_level.name(),
+              line_start_indent_level_id,
+              self.writer.line_start_indent_level()
+            );
+          }
           let val = self.writer.line_start_indent_level();
           self.update_state_to_save_point(save_point, false);
           self.resolved_actions.push(ResolvedAction::LineStartIndentLevel(line_start_indent_level_id, self.resolved_line_start_indent_levels.get(line_start_indent_level_id)));
@@ -715,6 +752,7 @@ impl<'a> Printer<'a> {
   }
 
   #[inline]
+  // 5. handle_condition: if it returns None, we start looking ahead to resolve it. Paths are skipped during this pass.
   fn handle_condition(&mut self, condition: &'a Condition, next_node: &Option<PrintItemPath>) {
     let condition_id = condition.unique_id();
     let condition_name = condition.name();
@@ -734,7 +772,7 @@ impl<'a> Printer<'a> {
       condition.resolve(&mut ConditionResolverContext::new(self, self.get_writer_info()))
     };
     
-    if !condition_name.is_empty() && super::is_debug() {
+    if super::is_debug() {
         eprintln!("Condition {} ({}): {:?}", condition_name, condition_id, condition_value);
     }
 
@@ -785,7 +823,11 @@ impl<'a> Printer<'a> {
   }
 
   #[inline]
+  // 7. handle_string: checking if current line exceeds max_width. If so, we restore to the last PossibleNewLine.
   fn handle_string(&mut self, text: &'a StringContainer) {
+    if super::is_debug() {
+      eprintln!("handle_string ('{}') at col {}", text.text, self.writer.column_number());
+    }
     #[cfg(debug_assertions)]
     self.validate_string(text.text);
 
