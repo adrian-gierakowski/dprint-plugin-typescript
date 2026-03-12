@@ -571,8 +571,18 @@ impl<'a> Printer<'a> {
       Signal::QueueStartIndent => self.writer.queue_indent(),
       Signal::StartIndent => self.writer.start_indent(),
       Signal::FinishIndent => self.writer.finish_indent(),
-      Signal::StartNewLineGroup => self.new_line_group_depth += 1,
-      Signal::FinishNewLineGroup => self.new_line_group_depth -= 1,
+      Signal::StartNewLineGroup => {
+        self.new_line_group_depth += 1;
+        if super::is_debug() {
+          eprintln!("StartNewLineGroup -> depth: {}", self.new_line_group_depth);
+        }
+      }
+      Signal::FinishNewLineGroup => {
+        self.new_line_group_depth -= 1;
+        if super::is_debug() {
+          eprintln!("FinishNewLineGroup -> depth: {}", self.new_line_group_depth);
+        }
+      }
       Signal::SingleIndent => self.writer.single_indent(),
       Signal::StartIgnoringIndent => self.writer.start_ignoring_indent(),
       Signal::FinishIgnoringIndent => self.writer.finish_ignoring_indent(),

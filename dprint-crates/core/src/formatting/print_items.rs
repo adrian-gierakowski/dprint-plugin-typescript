@@ -116,6 +116,10 @@ impl PrintItems {
   }
 
   pub fn push_signal(&mut self, signal: Signal) {
+    if matches!(signal, Signal::StartNewLineGroup) && super::is_debug() {
+      let bt = std::backtrace::Backtrace::force_capture();
+      eprintln!("PUSHING StartNewLineGroup\n{}", bt);
+    }
     self.push_item_internal(PrintItem::Signal(signal));
   }
 

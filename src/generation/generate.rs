@@ -2201,7 +2201,14 @@ fn gen_binary_expr<'a>(node: &BinExpr<'a>, context: &mut Context<'a>) -> PrintIt
 
   fn should_newline_group_bin_item_expr<'a>(node: Node<'a>, context: &Context<'a>) -> bool {
     if let Some(node) = node.to::<ParenExpr>() {
+      if matches!(node.expr, Expr::Cond(_)) {
+        return false;
+      }
       return should_newline_group_bin_item_expr(node.expr.into(), context);
+    }
+
+    if node.is::<CondExpr>() {
+      return false;
     }
 
     if is_jsx_paren_expr_handled_node(node, context) {
@@ -2863,6 +2870,8 @@ fn gen_paren_expr<'a>(node: &'a ParenExpr<'a>, context: &mut Context<'a>) -> Pri
     if let Node::ArrowExpr(arrow_expr) = node.parent() {
       debug_assert!(arrow_expr.body.start() == node.start());
       use_new_line_group_for_arrow_body(arrow_expr, context)
+    } else if matches!(node.expr, Expr::Cond(_)) {
+      false
     } else {
       true
     }
@@ -7792,11 +7801,13 @@ fn gen_close_paren_with_type<'a>(opts: GenCloseParenWithTypeOptions<'a>, context
       } else if context.config.parameters_prefer_hanging == PreferHanging::Always && param_count > 1 {
         // This was done to prevent the second argument becoming hanging, which doesn't
         // look good especially when the return type then becomes multi-line.
-        match type_node {
-          Node::TsUnionType(_) | Node::TsIntersectionType(_) => false,
+        let result = match type_node {
+          Node::TsUnionType(_) | Node::TsIntersectionType(_) | Node::CondExpr(_) => false,
           Node::TsTypeAnn(type_ann) => !matches!(type_ann.type_ann, TsType::TsUnionOrIntersectionType(_)),
           _ => true,
-        }
+        };
+        eprintln!("PARAM NEW LINE GROUP: {:?} -> {}", type_node.kind(), result);
+        result
       } else {
         true
       }
@@ -7959,7 +7970,7 @@ fn gen_separated_values_with_result<'a>(opts: GenSeparatedValuesParams<'a>, cont
           // Prefer going inline multi-line for certain expressions in arguments
           // when initially single line.
           // Example: call({\n}) instead of call(\n  {\n  }\n)
-          NodeOrSeparator::Node(Node::ExprOrSpread(expr_or_spread)) => !matches!(expr_or_spread.expr, Expr::Object(_) | Expr::Array(_)),
+          NodeOrSeparator::Node(Node::ExprOrSpread(expr_or_spread)) => !matches!(expr_or_spread.expr, Expr::Object(_) | Expr::Array(_) | Expr::Cond(_)),
           _ => true,
         };
 

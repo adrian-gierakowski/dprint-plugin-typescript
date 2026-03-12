@@ -63,6 +63,10 @@ pub fn with_no_new_lines(item: PrintItems) -> PrintItems {
 }
 
 pub fn new_line_group(item: PrintItems) -> PrintItems {
+  if super::super::is_debug() {
+    let bt = std::backtrace::Backtrace::force_capture();
+    eprintln!("NEW LINE GROUP CALLED\n{}", bt);
+  }
   if item.is_empty() {
     return item;
   }
