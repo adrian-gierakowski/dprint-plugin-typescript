@@ -38,6 +38,9 @@
 
           cargoLock = {
             lockFile = ./Cargo.lock;
+            outputHashes = {
+              "dprint-core-0.67.4" = "sha256-LcefzKNXSKiaNcHnAx7GMXu8zzErmKh1WBjmorX5Jw8=";
+            };
           };
 
           # We don't need native dependencies like openssl for a wasm build.
@@ -47,9 +50,6 @@
             rustToolchain
             pkg-config
           ];
-
-          # Disable tests for now as some formatting is unstable on this branch
-          # doCheck = false;
 
           # --- FIXED BUILD PROCESS ---
           # Instead of relying on environment variables that can be ignored,
