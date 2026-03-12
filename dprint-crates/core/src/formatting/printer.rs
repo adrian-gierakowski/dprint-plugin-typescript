@@ -406,6 +406,7 @@ impl<'a> Printer<'a> {
 
   // 8. update_state_to_save_point: restoring state. If is_for_new_line is true, we write a newline.
   fn update_state_to_save_point(&mut self, save_point: &'a SavePoint<'a>, is_for_new_line: bool) {
+    #[cfg(debug_assertions)]
     if super::is_debug() {
       eprintln!("Restoring save point: {} at line {}, col {} (is_for_new_line: {})", save_point.name, self.writer.line_number(), self.writer.column_number(), is_for_new_line);
     }
