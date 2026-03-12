@@ -2894,9 +2894,9 @@ fn should_skip_paren_expr<'a>(node: &'a ParenExpr<'a>, context: &Context<'a>) ->
     return false;
   }
 
-  // keep when there is a JSDoc type assertion
+  // keep when there is a JSDoc because it could be a type assertion or satisfies
   for c in node.leading_comments_fast(context.program) {
-    if c.kind == CommentKind::Block && c.text.starts_with('*') && c.text.contains("@type") {
+    if c.kind == CommentKind::Block && c.text.starts_with('*') {
       return false;
     }
   }
@@ -2925,6 +2925,7 @@ fn should_skip_paren_expr<'a>(node: &'a ParenExpr<'a>, context: &Context<'a>) ->
       | NodeKind::JSXExprContainer
       | NodeKind::UpdateExpr
       | NodeKind::ComputedPropName
+      | NodeKind::KeyValueProp
   ) {
     return true;
   }
@@ -3648,7 +3649,15 @@ fn gen_property_signature<'a>(node: &TsPropertySignature<'a>, context: &mut Cont
 fn gen_quotable_prop<'a>(node: Node<'a>, context: &mut Context<'a>) -> PrintItems {
   match context.config.quote_props {
     QuoteProps::AsNeeded => match node {
-      Node::Str(str_lit) if is_text_valid_identifier(str_lit.value()) => gen_from_raw_string(str_lit.value()),
+      Node::Str(str_lit) => {
+        if let Some(text) = str_lit.value().as_str()
+          && is_text_valid_identifier(text)
+        {
+          gen_from_raw_string(text)
+        } else {
+          gen_node(node, context)
+        }
+      }
       _ => gen_node(node, context),
     },
     QuoteProps::Consistent => match context.use_consistent_quote_props() {
@@ -3660,7 +3669,10 @@ fn gen_quotable_prop<'a>(node: Node<'a>, context: &mut Context<'a>) -> PrintItem
       },
       Some(false) => match node {
         // remove quotes
-        Node::Str(str_lit) => gen_from_raw_string(str_lit.value()),
+        Node::Str(str_lit) => match str_lit.value().as_str() {
+          Some(text) => gen_from_raw_string(text),
+          None => gen_node(node, context),
+        },
         _ => gen_node(node, context),
       },
       None => {
@@ -3707,7 +3719,10 @@ fn use_consistent_quotes_for_members<'a>(mut members: impl Iterator<Item = Node<
   fn check_expr(expr: Expr) -> bool {
     match expr {
       Expr::Ident(ident) => !is_text_valid_identifier(ident.sym()),
-      Expr::Lit(Lit::Str(str)) => !is_text_valid_identifier(str.value()),
+      Expr::Lit(Lit::Str(str)) => match str.value().as_str() {
+        Some(text) => !is_text_valid_identifier(text),
+        None => true,
+      },
       _ => false,
     }
   }
@@ -3715,7 +3730,10 @@ fn use_consistent_quotes_for_members<'a>(mut members: impl Iterator<Item = Node<
   fn check_prop_name(name: PropName) -> bool {
     match name {
       PropName::Ident(ident) => !is_text_valid_identifier(ident.sym()),
-      PropName::Str(str) => !is_text_valid_identifier(str.value()),
+      PropName::Str(str) => match str.value().as_str() {
+        Some(text) => !is_text_valid_identifier(text),
+        None => true,
+      },
       _ => false,
     }
   }
@@ -9126,7 +9144,7 @@ fn gen_jsx_children<'a>(opts: GenJsxChildrenOptions<'a>, context: &mut Context<'
     let mut found_non_space_child = false; // include space expressions at the start
 
     for child in real_children.into_iter() {
-      if found_non_space_child && node_helpers::has_jsx_space_expr_text(child) {
+      if found_non_space_child && node_helpers::has_jsx_space_expr_text(child, context.program) {
         current_jsx_space_exprs.push(child);
         continue;
       }
@@ -9248,19 +9266,19 @@ fn gen_jsx_children<'a>(opts: GenJsxChildrenOptions<'a>, context: &mut Context<'
 
   /// If the node has a "JSX space expression" between or text that's only spaces between.
   fn has_jsx_space_between<'a>(previous_node: Node<'a>, next_node: Node<'a>, program: Program<'a>) -> bool {
-    return node_helpers::nodes_have_only_spaces_between(previous_node, next_node, program) || has_jsx_space_expr_between(previous_node, next_node);
-
-    fn has_jsx_space_expr_between(previous_node: Node, next_node: Node) -> bool {
+    fn has_jsx_space_expr_between(previous_node: Node, next_node: Node, program: Program) -> bool {
       let nodes_between = node_helpers::get_siblings_between(previous_node, next_node);
 
       for node_between in nodes_between {
-        if node_helpers::has_jsx_space_expr_text(node_between) {
+        if node_helpers::has_jsx_space_expr_text(node_between, program) {
           return true;
         }
       }
 
       false
     }
+
+    node_helpers::nodes_have_only_spaces_between(previous_node, next_node, program) || has_jsx_space_expr_between(previous_node, next_node, program)
   }
 }
 
