@@ -1,0 +1,8 @@
+~~ lineWidth: 30, arguments.preferHanging: always ~~
+== should format ==
+f(a, bbb === ccc ? ddddddd : eeeeeee);
+
+[expect]
+f(a, bbb === ccc
+    ? ddddddd
+    : eeeeeee);

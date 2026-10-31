@@ -1,0 +1,11 @@
+~~ lineWidth: 30, arguments.preferHanging: always ~~
+== should collapse argument to single line ==
+f(a,
+    bbb === ccc
+        ? ddddddd
+        : eeeeeee);
+
+[expect]
+f(a, bbb === ccc
+    ? ddddddd
+    : eeeeeee);

@@ -1,0 +1,10 @@
+~~ deno: true, lineWidth: 30 ~~
+== should format as-is ==
+const id = (test && long_test
+  ? a.id
+  : b.id) ?? "0000";
+
+[expect]
+const id = (test && long_test
+  ? a.id
+  : b.id) ?? "0000";

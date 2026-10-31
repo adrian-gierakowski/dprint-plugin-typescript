@@ -1,0 +1,59 @@
+~~ lineWidth: 40, indentWidth: 2, memberExpression.linePerExpression: true ~~
+== allow arrow as argument on same line when last arg is arrow with braces ==
+f(aaaaaaaaaaaaaaaaaaa, () => a => { return a });
+
+[expect]
+f(aaaaaaaaaaaaaaaaaaa, () => a => {
+  return a;
+});
+
+== allow arrow as argument on same line when last arg is anon function ==
+f(aaaaaaaaaaa, () => () => function (a) { return a });
+
+[expect]
+f(aaaaaaaaaaa, () => () =>
+  function(a) {
+    return a;
+  });
+
+== puts args on own lines when arrow group plus indent exceeds lineWidth ==
+f(aaaaaaaaaaaa, () => () => function (a) { return a });
+
+[expect]
+f(
+  aaaaaaaaaaaa,
+  () => () =>
+    function(a) {
+      return a;
+    },
+);
+
+== arrow with single line property access in return ==
+f(aaaaaaaaaaaaaaaaa, bbbbbbbbb => cccccc.d);
+
+[expect]
+f(
+  aaaaaaaaaaaaaaaaa,
+  bbbbbbbbb => cccccc.d,
+);
+
+== arrow with multi line property access in return ==
+f(aaaaaaaaaaaaaaaaa, bbbbbbbbb => cccccc
+  .d);
+
+[expect]
+f(aaaaaaaaaaaaaaaaa, bbbbbbbbb =>
+  cccccc
+    .d);
+
+== arrow with multi line property access in return 2 ==
+f(aaaaaaaaaaaaaaaaa, bbbbbbbbb => ccccccc
+  .d);
+
+[expect]
+f(
+  aaaaaaaaaaaaaaaaa,
+  bbbbbbbbb =>
+    ccccccc
+      .d,
+);

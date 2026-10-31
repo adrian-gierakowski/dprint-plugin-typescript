@@ -2002,6 +2002,7 @@ fn gen_await_expr<'a>(node: &AwaitExpr<'a>, context: &mut Context<'a>) -> PrintI
   items
 }
 
+// 3. Generating binary expression. These often trigger look-aheads.
 fn gen_binary_expr<'a>(node: &BinExpr<'a>, context: &mut Context<'a>) -> PrintItems {
   let mut items = PrintItems::new();
   let flattened_binary_expr = get_flattened_bin_expr(node, context);
@@ -2200,7 +2201,14 @@ fn gen_binary_expr<'a>(node: &BinExpr<'a>, context: &mut Context<'a>) -> PrintIt
 
   fn should_newline_group_bin_item_expr<'a>(node: Node<'a>, context: &Context<'a>) -> bool {
     if let Some(node) = node.to::<ParenExpr>() {
+      if matches!(node.expr, Expr::Cond(_)) {
+        return false;
+      }
       return should_newline_group_bin_item_expr(node.expr.into(), context);
+    }
+
+    if node.is::<CondExpr>() {
+      return false;
     }
 
     if is_jsx_paren_expr_handled_node(node, context) {
@@ -2347,6 +2355,7 @@ fn gen_class_expr<'a>(node: &ClassExpr<'a>, context: &mut Context<'a>) -> PrintI
   )
 }
 
+// 4. Generating ternary expression. These also trigger look-aheads and often contain nested PossibleNewLine signals.
 fn gen_conditional_expr<'a>(node: &CondExpr<'a>, context: &mut Context<'a>) -> PrintItems {
   let question_token = context.token_finder.get_first_operator_after(&node.test, "?").unwrap();
   let colon_token = context.token_finder.get_first_operator_after(&node.cons, ":").unwrap();
@@ -2861,6 +2870,8 @@ fn gen_paren_expr<'a>(node: &'a ParenExpr<'a>, context: &mut Context<'a>) -> Pri
     if let Node::ArrowExpr(arrow_expr) = node.parent() {
       debug_assert!(arrow_expr.body.start() == node.start());
       use_new_line_group_for_arrow_body(arrow_expr, context)
+    } else if matches!(node.expr, Expr::Cond(_)) {
+      false
     } else {
       true
     }
@@ -7790,11 +7801,13 @@ fn gen_close_paren_with_type<'a>(opts: GenCloseParenWithTypeOptions<'a>, context
       } else if context.config.parameters_prefer_hanging == PreferHanging::Always && param_count > 1 {
         // This was done to prevent the second argument becoming hanging, which doesn't
         // look good especially when the return type then becomes multi-line.
-        match type_node {
-          Node::TsUnionType(_) | Node::TsIntersectionType(_) => false,
+        let result = match type_node {
+          Node::TsUnionType(_) | Node::TsIntersectionType(_) | Node::CondExpr(_) => false,
           Node::TsTypeAnn(type_ann) => !matches!(type_ann.type_ann, TsType::TsUnionOrIntersectionType(_)),
           _ => true,
-        }
+        };
+        eprintln!("PARAM NEW LINE GROUP: {:?} -> {}", type_node.kind(), result);
+        result
       } else {
         true
       }
@@ -7957,7 +7970,7 @@ fn gen_separated_values_with_result<'a>(opts: GenSeparatedValuesParams<'a>, cont
           // Prefer going inline multi-line for certain expressions in arguments
           // when initially single line.
           // Example: call({\n}) instead of call(\n  {\n  }\n)
-          NodeOrSeparator::Node(Node::ExprOrSpread(expr_or_spread)) => !matches!(expr_or_spread.expr, Expr::Object(_) | Expr::Array(_)),
+          NodeOrSeparator::Node(Node::ExprOrSpread(expr_or_spread)) => !matches!(expr_or_spread.expr, Expr::Object(_) | Expr::Array(_) | Expr::Cond(_)),
           _ => true,
         };
 
@@ -8388,6 +8401,11 @@ fn gen_for_flattened_member_like_expr<'a>(node: FlattenedMemberLikeExpr<'a>, con
       } else if !context.config.member_expression_line_per_expression {
         items.push_condition(conditions::if_above_width(context.config.indent_width, Signal::PossibleNewLine.into()));
       } else {
+        // This condition uses look-ahead to determine if the entire member expression (up to the last item) 
+        // spans multiple lines. If so, it forces a newline for every dot in the chain.
+        // BUG: If multiple dots look ahead to the same `member_expr_last_item_start_ln`, 
+        // the `dprint-core` state leak (non-restoration of resolved maps) causes 
+        // incorrect formatting if a restoration changes the layout.
         items.push_condition(if_true_or(
           "isMultipleLines",
           Rc::new(move |context| condition_helpers::is_multiple_lines(context, member_expr_start_ln, member_expr_last_item_start_ln)),
@@ -8793,6 +8811,9 @@ fn gen_conditional_brace_body<'a>(opts: GenConditionalBraceBodyOptions<'a>, cont
   items.push_line_and_column(start_lc);
   items.push_anchor(LineNumberAnchor::new(end_ln));
   items.push_condition(open_brace_condition);
+  if !is_body_empty_stmt {
+    items.push_signal(Signal::PossibleNewLine);
+  }
   items.push_line_and_column(start_inner_text_lc);
   let generated_comments = gen_comment_collection(header_trailing_comments.into_iter(), None, None, context);
   if !generated_comments.is_empty() {
@@ -9408,6 +9429,7 @@ fn gen_assignment_op_to<'a>(expr: Node<'a>, _op: &'static str, op_to: &'static S
   gen_assignment_like_with_token(expr, op_to, op_token, context)
 }
 
+// 1. Entering assignment generation. A PossibleNewLine is pushed if the header is long.
 fn gen_assignment_like_with_token<'a>(expr: Node<'a>, op: &'static StringContainer, op_token: Option<&TokenAndSpan>, context: &mut Context<'a>) -> PrintItems {
   let use_new_line_group = get_use_new_line_group(expr);
   let mut items = PrintItems::new();
@@ -9427,6 +9449,7 @@ fn gen_assignment_like_with_token<'a>(expr: Node<'a>, op: &'static StringContain
   let generated_assignment = {
     let mut items = PrintItems::new();
     if !had_op_trailing_comments {
+      // 2. This condition decides whether to push a PossibleNewLine after '='.
       items.push_condition(conditions::if_above_width_or(
         context.config.indent_width,
         {
@@ -9438,6 +9461,7 @@ fn gen_assignment_like_with_token<'a>(expr: Node<'a>, op: &'static StringContain
         Signal::SpaceIfNotTrailing.into(),
       ));
     }
+    // 3. Generate the expression (the RHS of the assignment).
     let assignment = gen_node(expr, context);
     let assignment = if had_op_trailing_comments {
       assignment
