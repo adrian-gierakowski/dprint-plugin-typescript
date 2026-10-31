@@ -4,3 +4,4 @@ sourcemap
 deployment/npm/plugin.wasm
 deployment/npm/node_modules
 .vscode
+.direnv
